@@ -23,9 +23,10 @@ public class AdvancedScoreboard implements ModInitializer {
             // 将配置实例设置到全局
             Global.config = this.config;
         } catch (Exception e) {
-            LOGGER.error("Could not load config file,mod did not load,err: ", e.getMessage());
+            LOGGER.error("could not load config file,mod did not load,err: {}", e.getMessage());
             return;
         }
+
         //注册服务器启动完毕的事件
         ServerLifecycleEvents.SERVER_STARTED.register(ServerStartedEvent::onServerStarted);
 

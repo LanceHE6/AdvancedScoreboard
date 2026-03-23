@@ -1,24 +1,23 @@
 package cn.hycer.advancedscoreboard.Event;
 
 import cn.hycer.advancedscoreboard.Config.Config;
+import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.scoreboard.ScoreAccess;
-import net.minecraft.scoreboard.ScoreboardObjective;
 
 public class PlayerBreakBlockEvent {
+
+    // 从配置文件中获取计分板名称
+    private static final String internalName = Config.MINE_COUNT_INTERNAL_NAME;
+
     public static void onBreak(PlayerEntity player) {
-        String internalName = "mine_count";//从配置文件获取内部名字
 
-        //获取记分对象
-        ScoreboardObjective obj = Global.scoreboard.getNullableObjective(internalName);
-        if (obj == null) return;
-
-        ScoreAccess score = Global.scoreboard.getOrCreateScore(player, obj);
-
+        ScoreboardItem mineCountScoreboard = Global.config.getScoreboardByInternalName(internalName);
         //获取玩家的分数
-        int playerScore = score.getScore();
+        String playerName = player.getName().getString();
+        int playerScore = mineCountScoreboard.getDataValue(playerName, 0);
         //更新玩家的分数
-        score.setScore(++playerScore);
+        Global.config.getScoreboardByInternalName(Config.MINE_COUNT_INTERNAL_NAME).updateData(playerName, ++playerScore);
+        Global.config.print();
     }
 }
