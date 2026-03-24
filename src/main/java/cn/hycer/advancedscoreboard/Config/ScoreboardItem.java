@@ -12,7 +12,6 @@ public class ScoreboardItem {
     private String displayName;  // 显示名
     private Map<String, Integer> data = new LinkedHashMap<>(); // 计分板数据（UUID->数值）
 
-    // ========== Getter & Setter ==========
     public String getInternalName() {
         return internalName;
     }
@@ -37,7 +36,6 @@ public class ScoreboardItem {
         this.data = data != null ? data : new LinkedHashMap<>();
     }
 
-    // ========== 辅助方法 ==========
     /**
      * 更新计分板数据（玩家->数值）
      * @param playerName 玩家名称

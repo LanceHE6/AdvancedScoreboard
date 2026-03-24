@@ -119,7 +119,7 @@ public class Config {
 
             // 写入JSON文件
             OBJECT_MAPPER.writeValue(this.configFile, this);
-            logger.info("config file saved successfully: {}", this.configFile.getAbsolutePath());
+            logger.debug("config file saved: {}", this.configFile.getAbsolutePath());
         } catch (IOException e) {
             logger.error("save config failed: {}", e);
         }

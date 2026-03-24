@@ -15,6 +15,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 
+import static cn.hycer.advancedscoreboard.Global.Global.logger;
 import static cn.hycer.advancedscoreboard.Global.Global.scoreboard;
 
 public class ServerStartedEvent {
@@ -51,11 +52,12 @@ public class ServerStartedEvent {
                 ScoreboardCriterion.RenderType.INTEGER,
                 true,
                 null
-        );
-        // 默认显示挖掘榜
-        if (sb.getInternalName() == Config.MINE_COUNT_INTERNAL_NAME) {
-            scoreboard.setObjectiveSlot(ScoreboardDisplaySlot.SIDEBAR, scoreboardObj);
-        }
+            );
+            logger.debug("registered: {}", sb.getInternalName());
+            // 默认显示挖掘榜
+            if (Objects.equals(sb.getInternalName(), Config.MINE_COUNT_INTERNAL_NAME)) {
+                scoreboard.setObjectiveSlot(ScoreboardDisplaySlot.SIDEBAR, scoreboardObj);
+            }
         }
     }
 
@@ -95,51 +97,25 @@ public class ServerStartedEvent {
         });
     }
 
-    // 在线时长统计任务（按整数小时存储）
+    // 在线时长计时器
     public static void startOnlineTimeCounter(MinecraftServer server) {
         server.submit(() -> {
             new Thread(() -> {
-                // 每个玩家的秒数累计器
-                final Map<ServerPlayerEntity, Integer> playerSecondCounter = new ConcurrentHashMap<>();
-
                 while (!server.isStopped()) {
                     try {
                         Thread.sleep(1000); // 每秒执行一次
                         server.execute(() -> {
-                            String onlineTimeInternalName = "online_time";
-                            ScoreboardObjective onlineTimeObj = scoreboard.getNullableObjective(onlineTimeInternalName);
+                            ScoreboardObjective onlineTimeObj = scoreboard.getNullableObjective(Config.ONLINE_TIME_INTERNAL_NAME);
 
                             if (onlineTimeObj == null) return;
 
                             // 遍历所有在线玩家更新时长
                             server.getPlayerManager().getPlayerList().forEach(player -> {
                                 if (player.isAlive() && !player.isSpectator()) {
-                                    // 1. 获取该玩家当前累计的秒数
-                                    int currentSeconds = playerSecondCounter.getOrDefault(player, 0);
-                                    // 2. 秒数+1
-                                    currentSeconds += 1;
-                                    // 3. 更新秒数累计器
-                                    playerSecondCounter.put(player, currentSeconds);
-
-                                    // 4. 满1小时更新小时数
-                                    if (currentSeconds % 3600 == 0) {
-                                        var scoreAccess = scoreboard.getOrCreateScore(player, onlineTimeObj);
-                                        int currentHours = scoreAccess.getScore();
-                                        scoreAccess.setScore(currentHours + 1);
-
-                                        // 同步更新到JSON配置（关键：内存中先更新）
-                                        updateScoreboardDataToConfig(
-                                                onlineTimeInternalName,
-                                                player.getUuidAsString(),
-                                                currentHours + 1
-                                        );
-
-                                        System.out.println("玩家" + player.getName().getString() +
-                                                " 在线时长累计1小时，当前总时长：" + (currentHours + 1) + "小时");
-                                    }
-                                } else {
-                                    // 玩家离线/旁观/死亡时清空累计器
-                                    playerSecondCounter.remove(player);
+                                    String name = player.getName().getString();
+                                    int currentSeconds = Global.config.getScoreboardByInternalName(Config.ONLINE_TIME_INTERNAL_NAME)
+                                            .getDataValue(name, 0);
+                                    Global.config.getScoreboardByInternalName(Config.ONLINE_TIME_INTERNAL_NAME).updateData(name, ++currentSeconds);
                                 }
                             });
                         });
@@ -152,7 +128,7 @@ public class ServerStartedEvent {
         });
     }
 
-    // 5秒同步配置任务（读取配置→更新计分板→保存数据）
+    // 同步配置（读取配置→更新计分板→保存数据）
     public static void startConfigSyncTask(MinecraftServer server) {
         server.submit(() -> {
             new Thread(() -> {
@@ -163,15 +139,14 @@ public class ServerStartedEvent {
                             try {
                                 // 遍历所有计分板，将配置数据同步到游戏内计分板
                                 syncConfigToScoreboard();
-                                System.out.println("已更新计分板");
+                                logger.trace("scoreboard updated");
 
                                 // 将数据保存至本地
                                 Global.config.saveConfig(); // 保存到本地文件
-                                System.out.println("已将计分板数据保存到JSON配置文件");
+                                logger.trace("config updated");
 
                             } catch (Exception e) {
-                                System.err.println("配置同步失败：" + e.getMessage());
-                                e.printStackTrace();
+                                logger.error("config sync failed： {}", e.getMessage());
                             }
                         });
                     } catch (InterruptedException e) {
@@ -191,25 +166,23 @@ public class ServerStartedEvent {
             ScoreboardObjective objective = scoreboard.getNullableObjective(internalName);
             if (objective == null) continue;
 
+
             // 遍历配置中的玩家数据，更新到计分板
             for (Map.Entry<String, Integer> entry : item.getData().entrySet()) {
                 String playerName = entry.getKey();
-                int scoreValue = entry.getValue();
-
-                // 根据UUID获取ScoreHolder
+                int scoreValue;
+                // 在线时长榜单特殊处理，以小时显示
+                if (Objects.equals(internalName, Config.ONLINE_TIME_INTERNAL_NAME)) {
+                    scoreValue = entry.getValue() / 3600;
+                } else {
+                    scoreValue = entry.getValue();
+                }
+                // 根据name获取ScoreHolder
                 ScoreHolder scoreHolder = ScoreHolder.fromName(playerName);
                 // 更新计分板分数
                 ScoreAccess scoreAccess = scoreboard.getOrCreateScore(scoreHolder, objective);
                 scoreAccess.setScore(scoreValue);
             }
-        }
-    }
-
-    // 更新单个玩家的计分板数据到配置（内存中）
-    private static void updateScoreboardDataToConfig(String internalName, String playerName, int value) {
-        ScoreboardItem item = Global.config.getScoreboardByInternalName(internalName);
-        if (item != null) {
-            item.updateData(playerName, value);
         }
     }
 
@@ -228,33 +201,24 @@ public class ServerStartedEvent {
             // 获取所有已注册的计分板对象
             Collection<ScoreboardObjective> allObjectives = scoreboard.getObjectives();
             if (allObjectives.isEmpty()) {
-                System.out.println("[计分板初始化] 游戏内暂无计分板数据，无需清空");
                 return;
             }
 
             // 遍历清空每个计分板的所有玩家数据
-            int totalCleared = 0;
             for (ScoreboardObjective objective : allObjectives) {
                 Collection<ScoreboardEntry> scoreEntries = scoreboard.getScoreboardEntries(objective);
-                int clearedCount = 0;
 
                 // 逐个移除玩家分数
                 for (ScoreboardEntry entry : scoreEntries) {
                     ScoreHolder scoreHolder = ScoreHolder.fromName(entry.owner());
                     scoreboard.removeScore(scoreHolder, objective);
-                    clearedCount++;
                 }
 
-                totalCleared += clearedCount;
-                System.out.printf("[计分板初始化] 清空游戏内计分板「%s」的 %d 条数据%n",
-                        objective.getName(), clearedCount);
+                logger.info("reset scoreboard data success");
             }
 
-            System.out.printf("[计分板初始化] 完成！总计清空 %d 条游戏内计分板数据（配置文件未修改）%n", totalCleared);
-
         } catch (Exception e) {
-            System.err.println("[计分板初始化] 清空游戏内数据失败：" + e.getMessage());
-            e.printStackTrace();
+            logger.error("reset scoreboard data failed: {}", e.getMessage());
         }
     }
 }
