@@ -4,26 +4,24 @@ import cn.hycer.advancedscoreboard.Config.Config;
 import cn.hycer.advancedscoreboard.Event.PlayerBreakBlockEvent;
 import cn.hycer.advancedscoreboard.Event.ServerStartedEvent;
 import cn.hycer.advancedscoreboard.Global.Global;
+import static cn.hycer.advancedscoreboard.Global.Global.logger;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 public class AdvancedScoreboard implements ModInitializer {
-    public static final Logger LOGGER = LogManager.getLogger();
-    public Config config;
 
     @Override
     public void onInitialize() {
-
+        // 初始化全局日志
+        logger = LogManager.getLogger();
         try {
-            config = new Config(FabricLoader.getInstance().getConfigDir().toFile().getPath());
-            // 将配置实例设置到全局
-            Global.config = this.config;
+            // 初始化全局配置
+            Global.config = new Config(FabricLoader.getInstance().getConfigDir().toFile().getPath());
         } catch (Exception e) {
-            LOGGER.error("could not load config file,mod did not load,err: {}", e.getMessage());
+            logger.error("could not load config file, mod did not load, err: {}", e.getMessage());
             return;
         }
 
@@ -34,6 +32,7 @@ public class AdvancedScoreboard implements ModInitializer {
         PlayerBlockBreakEvents.AFTER.register(((world, playerEntity, blockPos, blockState, blockEntity) ->
                 PlayerBreakBlockEvent.onBreak(playerEntity)));
 
-        System.out.println("[AdvancedScoreboard] mod load success！");
+        
+        logger.info("mod load success!");
     }
 }

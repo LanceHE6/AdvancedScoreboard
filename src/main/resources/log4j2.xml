@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+
+    <Appenders>
+        <!-- 控制台输出Info及以上日志 -->
+        <Console name="ToConsole" target="SYSTEM_OUT">
+            <ThresholdFilter level="INFO" onMatch="ACCEPT" onMismatch="DENY"/>
+            <PatternLayout pattern="%highlight{%d{yyyy-MM-dd HH:mm:ss.SSS} [AdvancedScoreboard] %-5level: %msg%n}{FATAL=red blink, ERROR=red, WARN=yellow, INFO=green, DEBUG=cyan, TRACE=blue}"/>
+        </Console>
+
+        <!-- 文件保留所有日志 -->
+        <RollingFile name="ToFile"
+                     fileName="logs/advancedScoreboard-all.log"
+                     filePattern="logs/advancedScoreboard-all-%d{yyyy-MM-dd}.log.gz">
+
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36}: %msg%n"/>
+
+            <!-- 每天生成一个新文件 -->
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+            </Policies>
+
+            <!-- 日志文件最多保留7天 -->
+            <DefaultRolloverStrategy max="7"/>
+
+        </RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <Root level="ALL">
+            <AppenderRef ref="ToConsole"/>
+            <AppenderRef ref="ToFile"/>
+        </Root>
+    </Loggers>
+
+</Configuration>
