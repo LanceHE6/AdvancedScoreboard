@@ -3,8 +3,7 @@ package cn.hycer.advancedscoreboard.Config;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import cn.hycer.advancedscoreboard.AdvancedScoreboard;
-import org.apache.logging.log4j.Logger;
+import static cn.hycer.advancedscoreboard.Global.Global.logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,17 +11,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 计分板根配置类（对应 JSON 根节点）
+ * 根配置类
  */
 public class Config {
-    // 日志对象
-    private static final Logger LOGGER = AdvancedScoreboard.LOGGER;
     // JSON 配置文件名称
     public static final String CONFIG_FILE_NAME = "advanced_scoreboard.json";
 
     public static final String MINE_COUNT_INTERNAL_NAME = "mine_count";
     public static final String ONLINE_TIME_INTERNAL_NAME = "online_time";
-    // Jackson JSON 解析器（格式化输出）
+    // JSON 解析器（格式化输出）
     @JsonIgnore
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
             .enable(SerializationFeature.INDENT_OUTPUT);
@@ -34,7 +31,6 @@ public class Config {
     @JsonIgnore
     private final File configFile; // 配置文件对象
 
-    // ========== 构造方法 ==========
     /**
      * 空构造（Jackson 反序列化必需）
      */
@@ -43,11 +39,10 @@ public class Config {
     }
 
     /**
-     * 带路径构造（加载/保存配置）
+     * 带路径构造，加载配置
      * @param configDirPath 配置目录路径
      */
     public Config(String configDirPath) {
-        // 拼接配置文件完整路径
         this.configFile = new File(configDirPath + File.separator + CONFIG_FILE_NAME);
         // 初始化默认配置（首次启动）
         if (!this.configFile.exists()) {
@@ -58,7 +53,6 @@ public class Config {
         }
     }
 
-    // ========== 核心方法 ==========
     /**
      * 初始化默认配置（首次启动）
      */
@@ -79,15 +73,15 @@ public class Config {
         this.scoreboards.add(mineCountBoard);
         this.scoreboards.add(onlineTimeBoard);
 
-        LOGGER.info("default config initialization completed");
+        logger.info("default config initialization completed");
     }
 
     /**
-     * 从文件加载配置（映射到当前对象）
+     * 从文件加载配置
      */
     public void loadConfig() {
         if (this.configFile == null || !this.configFile.exists()) {
-            LOGGER.warn("the config file does not exist and cannot be loaded");
+            logger.warn("the config file does not exist and cannot be loaded");
             return;
         }
 
@@ -100,19 +94,19 @@ public class Config {
             // 覆盖当前对象的配置项
             this.switchInterval = loadedConfig.getSwitchInterval();
             this.scoreboards = loadedConfig.getScoreboards();
-            LOGGER.info("config file loaded successfully：{}", this.configFile.getAbsolutePath());
+            logger.info("config file loaded successfully: {}", this.configFile.getAbsolutePath());
         } catch (IOException e) {
-            LOGGER.error("load config failed, using default config: ", e);
+            logger.error("load config failed, using default config: {}", e);
             initDefaultConfig(); // 加载失败时回退到默认配置
         }
     }
 
     /**
-     * 保存当前配置到 JSON 文件（核心方法）
+     * 保存当前配置到 JSON 文件
      */
     public void saveConfig() {
         if (this.configFile == null) {
-            LOGGER.warn("the config file path has not been initialized and cannot be saved");
+            logger.warn("the config file path has not been initialized and cannot be saved");
             return;
         }
 
@@ -123,15 +117,14 @@ public class Config {
                 parentDir.mkdirs();
             }
 
-            // 写入JSON文件（UTF-8 编码）
+            // 写入JSON文件
             OBJECT_MAPPER.writeValue(this.configFile, this);
-            LOGGER.info("config file saved successfully：{}", this.configFile.getAbsolutePath());
+            logger.info("config file saved successfully: {}", this.configFile.getAbsolutePath());
         } catch (IOException e) {
-            LOGGER.error("save config failed", e);
+            logger.error("save config failed: {}", e);
         }
     }
 
-    // ========== 辅助方法（快速获取计分板） ==========
     /**
      * 根据内部名快速获取计分板配置
      * @param internalName 计分板内部名
@@ -143,19 +136,15 @@ public class Config {
                 .findFirst()
                 .orElse(null);
     }
-
-    public void print() {
-        try {
-            // 将对象转为格式化的JSON字符串
-            String configJson = OBJECT_MAPPER.writeValueAsString(this);
-            System.out.println("===== Scoreboard =====");
-            System.out.println(configJson);
-        } catch (Exception e) {
-            System.err.println("print config failed：" + e.getMessage());
-        }
+    @Override
+    public String toString() {
+        return "AdvancedScoreboardConfig{" +
+            "switchInterval=" + switchInterval +
+            ", scoreboards=" + scoreboards +
+            ", configFile=" + (configFile != null ? configFile.getAbsolutePath() : "null") +
+            '}';
     }
 
-    // ========== Getter & Setter ==========
     public int getSwitchInterval() {
         return switchInterval;
     }

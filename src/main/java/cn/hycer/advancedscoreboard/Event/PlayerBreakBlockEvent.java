@@ -1,5 +1,7 @@
 package cn.hycer.advancedscoreboard.Event;
 
+import static cn.hycer.advancedscoreboard.Global.Global.logger;
+
 import cn.hycer.advancedscoreboard.Config.Config;
 import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
@@ -18,6 +20,6 @@ public class PlayerBreakBlockEvent {
         int playerScore = mineCountScoreboard.getDataValue(playerName, 0);
         //更新玩家的分数
         Global.config.getScoreboardByInternalName(Config.MINE_COUNT_INTERNAL_NAME).updateData(playerName, ++playerScore);
-        Global.config.print();
+        logger.debug(Global.config.toString());
     }
 }

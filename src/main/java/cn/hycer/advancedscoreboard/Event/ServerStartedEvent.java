@@ -9,12 +9,11 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.world.World;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
 
 import static cn.hycer.advancedscoreboard.Global.Global.scoreboard;
 
@@ -25,12 +24,10 @@ public class ServerStartedEvent {
     public static void onServerStarted(MinecraftServer server) {
         // 初始化全局scoreboard变量
         scoreboard = Objects.requireNonNull(server.getWorld(World.OVERWORLD).getScoreboard());
-        // 清空服务器计分板数据
+        // 重置服务器计分板数据
         clearInGameScoreboardData(server);
-        // 注册挖掘榜
-        registerMineCount(server);
-        // 注册在线时长榜
-        registerOnlineTime(server);
+        // 注册计分板
+        registerScoreboard(server);
         // 启动计分板轮播任务
         startScoreboardSwitchTask(server);
         // 启动在线时长统计任务
@@ -39,60 +36,32 @@ public class ServerStartedEvent {
         startConfigSyncTask(server);
     }
 
-    // 注册挖掘榜
-    public static void registerMineCount(MinecraftServer server) {
-        String mineCountInternalName = "mine_count"; // 对应JSON配置中的internalName
-        // 从JSON配置读取显示名
-        ScoreboardItem mineCountItem = Global.config.getScoreboardByInternalName(mineCountInternalName);
-        String mineCountDisplayName = mineCountItem != null ? mineCountItem.getDisplayName() : "挖掘榜";
-
-        ScoreboardObjective mineCountScoreboardObj = scoreboard.getNullableObjective(mineCountInternalName);
-
-        //判断获取到的计分板对象是否为空
-        if (mineCountScoreboardObj != null) {
-            mineCountScoreboardObj.setDisplayName(Text.literal(mineCountDisplayName));
-            return;
-        }
-
-        mineCountScoreboardObj = scoreboard.addObjective(
-                mineCountInternalName,
+    public static void registerScoreboard(MinecraftServer server) {
+        List<ScoreboardItem> scoreboards = Global.config.getScoreboards();
+        for (ScoreboardItem sb : scoreboards) {
+            ScoreboardObjective scoreboardObj = scoreboard.getNullableObjective(sb.getInternalName());
+            if (scoreboardObj != null) {
+                scoreboardObj.setDisplayName(Text.literal(sb.getDisplayName()));
+                continue;
+            }
+            scoreboardObj = scoreboard.addObjective(
+                sb.getInternalName(),
                 ScoreboardCriterion.DUMMY,
-                Text.literal(mineCountDisplayName),
+                Text.literal(sb.getDisplayName()),
                 ScoreboardCriterion.RenderType.INTEGER,
                 true,
                 null
         );
         // 默认显示挖掘榜
-        scoreboard.setObjectiveSlot(ScoreboardDisplaySlot.SIDEBAR, mineCountScoreboardObj);
-    }
-
-    // 注册在线时长榜
-    public static void registerOnlineTime(MinecraftServer server) {
-        String onlineTimeInternalName = "online_time"; // 对应JSON配置中的internalName
-        // 从JSON配置读取显示名
-        ScoreboardItem onlineTimeItem = Global.config.getScoreboardByInternalName(onlineTimeInternalName);
-        String onlineTimeDisplayName = onlineTimeItem != null ? onlineTimeItem.getDisplayName() : "在线时长";
-
-        ScoreboardObjective onlineTimeScoreboardObj = scoreboard.getNullableObjective(onlineTimeInternalName);
-
-        if (onlineTimeScoreboardObj != null) {
-            onlineTimeScoreboardObj.setDisplayName(Text.literal(onlineTimeDisplayName));
-            return;
+        if (sb.getInternalName() == Config.MINE_COUNT_INTERNAL_NAME) {
+            scoreboard.setObjectiveSlot(ScoreboardDisplaySlot.SIDEBAR, scoreboardObj);
         }
-
-        onlineTimeScoreboardObj = scoreboard.addObjective(
-                onlineTimeInternalName,
-                ScoreboardCriterion.DUMMY,
-                Text.literal(onlineTimeDisplayName),
-                null, // 关键：取消INTEGER渲染，支持自定义显示
-                true,
-                null
-        );
+        }
     }
 
     // 轮播切换任务
     public static void startScoreboardSwitchTask(MinecraftServer server) {
-        // 从JSON配置读取轮播间隔（秒→毫秒）
+        // 从JSON配置读取轮播间隔
         int intervalSeconds = Global.config.getSwitchInterval();
         long intervalMs = intervalSeconds * 1000;
 
@@ -183,7 +152,7 @@ public class ServerStartedEvent {
         });
     }
 
-    // 新增：5秒同步配置任务（读取配置→更新计分板→保存数据）
+    // 5秒同步配置任务（读取配置→更新计分板→保存数据）
     public static void startConfigSyncTask(MinecraftServer server) {
         server.submit(() -> {
             new Thread(() -> {
@@ -192,11 +161,11 @@ public class ServerStartedEvent {
                         Thread.sleep(CONFIG_SYNC_INTERVAL); // 每隔5秒执行
                         server.execute(() -> {
                             try {
-                                // 步骤2：遍历所有计分板，将配置数据同步到游戏内计分板
+                                // 遍历所有计分板，将配置数据同步到游戏内计分板
                                 syncConfigToScoreboard();
                                 System.out.println("已更新计分板");
 
-                                // 步骤3:将数据保存至本地
+                                // 将数据保存至本地
                                 Global.config.saveConfig(); // 保存到本地文件
                                 System.out.println("已将计分板数据保存到JSON配置文件");
 
@@ -214,7 +183,7 @@ public class ServerStartedEvent {
         });
     }
 
-    // 辅助方法：将JSON配置中的数据同步到游戏内计分板
+    // 将JSON配置中的数据同步到游戏内计分板
     private static void syncConfigToScoreboard() {
         // 遍历所有配置的计分板
         for (ScoreboardItem item : Global.config.getScoreboards()) {
@@ -236,7 +205,7 @@ public class ServerStartedEvent {
         }
     }
 
-    // 辅助方法：更新单个玩家的计分板数据到配置（内存中）
+    // 更新单个玩家的计分板数据到配置（内存中）
     private static void updateScoreboardDataToConfig(String internalName, String playerName, int value) {
         ScoreboardItem item = Global.config.getScoreboardByInternalName(internalName);
         if (item != null) {
@@ -256,20 +225,20 @@ public class ServerStartedEvent {
         }
 
         try {
-            // 1. 获取所有已注册的计分板对象
+            // 获取所有已注册的计分板对象
             Collection<ScoreboardObjective> allObjectives = scoreboard.getObjectives();
             if (allObjectives.isEmpty()) {
                 System.out.println("[计分板初始化] 游戏内暂无计分板数据，无需清空");
                 return;
             }
 
-            // 2. 遍历清空每个计分板的所有玩家数据
+            // 遍历清空每个计分板的所有玩家数据
             int totalCleared = 0;
             for (ScoreboardObjective objective : allObjectives) {
                 Collection<ScoreboardEntry> scoreEntries = scoreboard.getScoreboardEntries(objective);
                 int clearedCount = 0;
 
-                // 逐个移除玩家的计分板分数（仅游戏内）
+                // 逐个移除玩家分数
                 for (ScoreboardEntry entry : scoreEntries) {
                     ScoreHolder scoreHolder = ScoreHolder.fromName(entry.owner());
                     scoreboard.removeScore(scoreHolder, objective);
