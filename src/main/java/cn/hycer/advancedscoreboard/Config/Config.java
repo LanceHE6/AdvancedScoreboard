@@ -24,7 +24,8 @@ public class Config {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
             .enable(SerializationFeature.INDENT_OUTPUT);
     // JSON 配置项
-    private int switchInterval = 10; // 轮播切换间隔（秒）
+    private int switchInterval = 10; // 轮播切换周期s
+    private int saveInterval = 5; // 数据保存周期s
     private List<ScoreboardItem> scoreboards = new ArrayList<>(); // 计分板列表
 
     // 非JSON字段
@@ -57,7 +58,6 @@ public class Config {
      * 初始化默认配置（首次启动）
      */
     private void initDefaultConfig() {
-        this.switchInterval = 10;
 
         // 初始化挖掘榜
         ScoreboardItem mineCountBoard = new ScoreboardItem();
@@ -93,6 +93,7 @@ public class Config {
             );
             // 覆盖当前对象的配置项
             this.switchInterval = loadedConfig.getSwitchInterval();
+            this.saveInterval = loadedConfig.getSaveInterval();
             this.scoreboards = loadedConfig.getScoreboards();
             logger.info("config file loaded successfully: {}", this.configFile.getAbsolutePath());
         } catch (IOException e) {
@@ -152,6 +153,15 @@ public class Config {
     public void setSwitchInterval(int switchInterval) {
         // 最小间隔1秒
         this.switchInterval = Math.max(1, switchInterval);
+    }
+
+    public int getSaveInterval() {
+        return saveInterval;
+    }
+
+    public void setSaveInterval(int saveInterval) {
+        // 最小间隔1秒
+        this.saveInterval = Math.max(1, saveInterval);
     }
 
     public List<ScoreboardItem> getScoreboards() {
