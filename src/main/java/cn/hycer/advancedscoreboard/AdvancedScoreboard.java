@@ -32,7 +32,6 @@ public class AdvancedScoreboard implements ModInitializer {
         PlayerBlockBreakEvents.AFTER.register(((world, playerEntity, blockPos, blockState, blockEntity) ->
                 PlayerBreakBlockEvent.onBreak(playerEntity)));
 
-        
         logger.info("mod load success!");
     }
 }
