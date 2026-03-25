@@ -48,10 +48,6 @@ public class ServerStartedEvent {
                 null
             );
             logger.debug("registered: {}", sb.getInternalName());
-            // 默认显示挖掘榜
-            if (Objects.equals(sb.getInternalName(), Config.MINE_COUNT_INTERNAL_NAME)) {
-                scoreboard.setObjectiveSlot(ScoreboardDisplaySlot.SIDEBAR, scoreboardObj);
-            }
         }
     }
 
