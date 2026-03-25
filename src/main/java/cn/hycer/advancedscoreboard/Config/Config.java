@@ -17,14 +17,15 @@ public class Config {
     // JSON 配置文件名称
     public static final String CONFIG_FILE_NAME = "advanced_scoreboard.json";
 
-    public static final String MINE_COUNT_INTERNAL_NAME = "mine_count";
-    public static final String ONLINE_TIME_INTERNAL_NAME = "online_time";
+    public static final String MINE_COUNT_INTERNAL_NAME = "mine_count"; // 挖掘量
+    public static final String ONLINE_TIME_INTERNAL_NAME = "online_time"; // 在线时长
+    public static final String ELYTRON_DISTANCE_INTERNAL_NAME = "elytron_distance"; // 鞘翅飞行距离
     // JSON 解析器（格式化输出）
     @JsonIgnore
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
             .enable(SerializationFeature.INDENT_OUTPUT);
     // JSON 配置项
-    private int switchInterval = 10; // 轮播切换周期s
+    private int switchInterval = 5; // 轮播切换周期s
     private int saveInterval = 5; // 数据保存周期s
     private List<ScoreboardItem> scoreboards = new ArrayList<>(); // 计分板列表
 
@@ -62,16 +63,21 @@ public class Config {
         // 初始化挖掘榜
         ScoreboardItem mineCountBoard = new ScoreboardItem();
         mineCountBoard.setInternalName(MINE_COUNT_INTERNAL_NAME);
-        mineCountBoard.setDisplayName("挖掘榜");
+        mineCountBoard.setDisplayName("===挖掘量===");
 
         // 初始化在线时长榜
         ScoreboardItem onlineTimeBoard = new ScoreboardItem();
         onlineTimeBoard.setInternalName(ONLINE_TIME_INTERNAL_NAME);
-        onlineTimeBoard.setDisplayName("在线时长");
+        onlineTimeBoard.setDisplayName("===在线时长(h)===");
+
+        ScoreboardItem elytronBoard = new ScoreboardItem();
+        elytronBoard.setInternalName(ELYTRON_DISTANCE_INTERNAL_NAME);
+        elytronBoard.setDisplayName("===飞行距离(km)===");
 
         // 添加到计分板列表
         this.scoreboards.add(mineCountBoard);
         this.scoreboards.add(onlineTimeBoard);
+        this.scoreboards.add(elytronBoard);
 
         logger.info("default config initialization completed");
     }
@@ -137,6 +143,7 @@ public class Config {
                 .findFirst()
                 .orElse(null);
     }
+    //TODO 重写
     @Override
     public String toString() {
         return "AdvancedScoreboardConfig{" +
