@@ -118,15 +118,28 @@ public class Task {
                 }
                 continue;
             }
+
             if (internalName.equals(Config.ELYTRON_DISTANCE_INTERNAL_NAME)) {
                 // 遍历所有在线玩家，更新飞行距离
                 for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
                     // 获取内置统计：飞行距离
-                    int aviateOneCM = player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.AVIATE_ONE_CM));
+                    int aviateOneCM = player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.AVIATE_ONE_CM)); // 单位cm
                     int aviateOneKM = aviateOneCM / 100 / 1000; // 转化为km
                     // 更新计分板
                     ScoreAccess scoreAccess = scoreboard.getOrCreateScore(player, objective);
                     scoreAccess.setScore(aviateOneKM);
+                }
+                continue;
+            }
+
+            if (internalName.equals(Config.DAMAGE_TAKEN_INTERNAL_NAME)) {
+                // 遍历所有玩家，更新受到的伤害
+                for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+                    // 获取内置统计-半心
+                    int damageTaken = player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.DAMAGE_TAKEN));
+
+                    ScoreAccess scoreAccess = scoreboard.getOrCreateScore(player, objective);
+                    scoreAccess.setScore(damageTaken);
                 }
                 continue;
             }
