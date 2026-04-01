@@ -7,10 +7,9 @@ import java.util.Map;
  * 单个计分板配置项（对应 JSON 中 scoreboards 数组的元素）
  */
 public class ScoreboardItem {
-    // ========== JSON 配置项 ==========
     private String internalName; // 内部名
     private String displayName;  // 显示名
-    private Map<String, Integer> data = new LinkedHashMap<>(); // 计分板数据（UUID->数值）
+    private Map<String, Integer> data = new LinkedHashMap<>(); // 计分板数据（玩家名->数值）
 
     public String getInternalName() {
         return internalName;
