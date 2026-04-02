@@ -1,16 +1,59 @@
-name: Build & Release Mod
+name: Build & Release
 
 on:
+  # 1. 打 tag 自动触发（v开头标签如 v1.0、v2.0）
   push:
     tags:
       - 'v*'
+
+  # 2. 手动触发（支持：所有分支 / 指定单个分支）
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: '构建类型'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all      # 构建所有分支
+          - single   # 构建指定分支
+      branch:
+        description: '仅单分支构建时填写：分支名（MC版本）'
+        required: false
+        default: ''
 
 jobs:
-  build:
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      branches: ${{ steps.get_branches.outputs.branches }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 获取仓库所有分支
+        id: get_branches
+        run: |
+          BRANCHES=$(git branch -r | grep -v '\->' | sed 's/origin\///' | jq -R . | jq -cs .)
+          echo "branches=$BRANCHES" >> $GITHUB_OUTPUT
+
+  build:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        branch: ${{ fromJson(needs.prepare.outputs.branches) }}
+    continue-on-error: true
+    steps:
+      - name: 过滤分支（只构建需要的）
+        if: |
+          (github.event.inputs.build_type == 'single' && github.event.inputs.branch == matrix.branch) ||
+          (github.event.inputs.build_type == 'all') ||
+          (github.event_name == 'push')
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.branch }}
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -18,48 +61,50 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Make Gradle executable
-        run: chmod +x ./gradlew
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
 
-      - name: Build mod
-        run: ./gradlew build --no-daemon
+      - name: Build
+        run: gradle build --no-daemon
 
-      - name: Read mod version
-        id: get_version
+      - name: 读取版本号
         run: |
-          VERSION=$(grep -oP 'mod_version=\K.+' gradle.properties)
-          MC_VERSION=$(grep -oP 'minecraft_version=\K.+' gradle.properties)
-          echo "MOD_VERSION=$VERSION" >> $GITHUB_ENV
-          echo "MC_VERSION=$MC_VERSION" >> $GITHUB_ENV
+          MOD_VER=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2)
+          MC_VER=$(grep '^minecraft_version=' gradle.properties | cut -d'=' -f2)
+          echo "MOD_VERSION=$MOD_VER" >> $GITHUB_ENV
+          echo "MC_VERSION=$MC_VER" >> $GITHUB_ENV
 
-      - name: Rename JAR to standard format
+      - name: 重命名 JAR
         run: |
           cd build/libs
+          rm -f *-sources.jar
           mv *.jar AdvancedScoreboard-fabric-${{ env.MOD_VERSION }}-${{ env.MC_VERSION }}.jar
 
-      - name: Upload build artifact
+      - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
-          name: AdvancedScoreboard-fabric-${{ env.MOD_VERSION }}-${{ env.MC_VERSION }}
+          name: jars
           path: build/libs/*.jar
 
   release:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
+        with:
+          name: jars
+          path: jars/
 
-      - name: Read versions
-        run: |
-          echo "MOD_VERSION=$(grep -oP 'mod_version=\K.+' gradle.properties)" >> $GITHUB_ENV
-          echo "MC_VERSION=$(grep -oP 'minecraft_version=\K.+' gradle.properties)" >> $GITHUB_ENV
+      - name: 获取模组版本
+        run: echo "MOD_VERSION=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2)" >> $GITHUB_ENV
 
-      - name: Create Release
+      - name: 创建 GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: AdvancedScoreboard v${{ env.MOD_VERSION }} (MC ${{ env.MC_VERSION }})
-          tag_name: ${{ github.ref_name }}
-          files: ./**/*.jar
+          name: AdvancedScoreboard v${{ env.MOD_VERSION }}
+          tag_name: ${{ github.ref_name || format('v{0}', env.MOD_VERSION) }}
+          files: jars/*.jar
           draft: false
           prerelease: false
         env:
