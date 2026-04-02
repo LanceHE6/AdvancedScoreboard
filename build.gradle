@@ -93,6 +93,8 @@ java {
 }
 
 jar {
+    archiveFileName.set("AdvancedScoreboard-${project.mod_version}-${project.minecraft_version}.jar")
+
     from("LICENSE") {
         rename { "${it}_${project.archivesBaseName}" }
     }
