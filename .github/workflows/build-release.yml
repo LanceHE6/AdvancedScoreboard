@@ -1,21 +1,21 @@
-name: Build & Release
+name: Build & Release (Multi-Branch)
 
 on:
   push:
     tags:
-      - 'v*'  # 匹配发布版本号
+      - 'v*'
   workflow_dispatch:
     inputs:
       build_type:
-        description: 构建类型
+        description: '构建类型'
         required: true
-        default: all
+        default: 'all'
         type: choice
         options:
           - all
           - single
       branch:
-        description: 单分支名称（如1.21.10）
+        description: '单分支构建时填写分支名'
         required: false
         default: ''
 
@@ -23,64 +23,77 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      branches: ${{ steps.branches.outputs.branches }}
+      branches: ${{ steps.get_branches.outputs.branches }}
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-      - id: branches
+        with:
+          fetch-depth: 0
+
+      - name: 获取仓库所有分支
+        id: get_branches
         run: |
-          branches=$(git branch -r | grep -v '\->' | sed 's/origin\///' | sort -Vu | jq -R . | jq -cs .)
-          echo "branches=$branches" >> $GITHUB_OUTPUT
+          BRANCHES=$(git branch -r | grep -v '\->' | sed 's/origin\///' | sort -u | jq -R . | jq -cs .)
+          echo "branches=$BRANCHES" >> $GITHUB_OUTPUT
 
   build:
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        branch: ${{ fromJson(needs.prepare.branches) }}
+        branch: ${{ fromJson(needs.prepare.outputs.branches) }}
       fail-fast: false
     continue-on-error: true
-
     steps:
-      - name: 过滤分支
+      - name: 过滤分支逻辑
         if: |
           (github.event.inputs.build_type == 'single' && github.event.inputs.branch == matrix.branch) ||
           (github.event.inputs.build_type == 'all') ||
           (github.event_name == 'push')
+        run: echo "开始构建分支 ${{ matrix.branch }}"
+
+      - name: Checkout 分支 ${{ matrix.branch }}
+        if: success()
         uses: actions/checkout@v4
         with:
           ref: ${{ matrix.branch }}
+          fetch-depth: 1
 
       - name: Set up JDK 21
+        if: success()
         uses: actions/setup-java@v4
         with:
-          java-version: 21
-          distribution: temurin
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        if: success()
+        uses: gradle/actions/setup-gradle@v3
 
       - name: Build with Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          arguments: build --no-daemon
+        if: success()
+        run: gradle build --no-daemon
 
-      - name: 获取版本号
+      - name: 读取版本号
         id: version
         run: |
-          mod_ver=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2)
-          mc_ver=$(grep '^minecraft_version=' gradle.properties | cut -d'=' -f2)
-          echo "mod=$mod_ver" >> $GITHUB_OUTPUT
-          echo "mc=$mc_ver" >> $GITHUB_OUTPUT
+          MOD_VER=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2)
+          MC_VER=$(grep '^minecraft_version=' gradle.properties | cut -d'=' -f2)
+          echo "MOD_VERSION=$MOD_VER" >> $GITHUB_ENV
+          echo "MC_VERSION=$MC_VER" >> $GITHUB_ENV
+          echo "mod_version=$MOD_VER" >> $GITHUB_OUTPUT
+          echo "mc_version=$MC_VER" >> $GITHUB_OUTPUT
 
       - name: 重命名 JAR
         run: |
           cd build/libs
           rm -f *-sources.jar
-          mv *.jar AdvancedScoreboard-fabric-${{ steps.version.outputs.mod }}-${{ steps.version.outputs.mc }}.jar
+          mv *.jar AdvancedScoreboard-${{ steps.version.outputs.mod_version }}-${{ steps.version.outputs.mc_version }}.jar
 
-      - name: 上传 Jar
-        uses: upload-artifact@v4
+      - name: 上传构建产物 (${{ matrix.branch }})
+        uses: actions/upload-artifact@v4
         with:
           name: jars-${{ matrix.branch }}
-          path: build/libs/*.jar
+          path: build/libs/AdvancedScoreboard-${{ steps.version.outputs.mod_version }}-${{ steps.version.outputs.mc_version }}.jar
 
   release:
     needs: build
@@ -88,23 +101,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 下载所有 Jar
-        uses: download-artifact@v4
+      - name: 下载所有构建产物
+        uses: actions/download-artifact@v4
         with:
-          path: outputs
+          path: ./outputs/
           pattern: jars-*
           merge-multiple: true
 
-      - name: 获取发布版本号
-        run: echo "RELEASE_VER=${{ github.ref_name }}" >> $GITHUB_ENV
+      - name: 获取模组版本
+        id: get_mod_ver
+        run: |
+          MOD_VER=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2)
+          echo "MOD_VERSION=$MOD_VER" >> $GITHUB_ENV
+          echo "mod_version=$MOD_VER" >> $GITHUB_OUTPUT
 
-      - name: 发布 Release
+      - name: 创建 GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ env.RELEASE_VER }}       # 标题 = 1.0
-          tag_name: ${{ env.RELEASE_VER }}    # Tag = 1.0
-          files: outputs/*.jar
+          # 标题 fabric-1.0
+          name: ${{ env.MOD_VERSION }}
+          # 自动生成 tag
+          tag_name: ${{ env.MOD_VERSION }}
+          files: ./outputs/*.jar
           draft: false
           prerelease: false
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
