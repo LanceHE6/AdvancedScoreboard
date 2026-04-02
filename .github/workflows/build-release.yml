@@ -83,10 +83,11 @@ jobs:
           echo "mod_version=$MOD_VER" >> $GITHUB_OUTPUT
           echo "mc_version=$MC_VER" >> $GITHUB_OUTPUT
 
-      - name: 重命名 JAR
+      - name: 重命名 JAR (修正重复 fabric)
         run: |
           cd build/libs
           rm -f *-sources.jar
+          # 修正命名：AdvancedScoreboard-fabric-模组版本-游戏版本.jar
           mv *.jar AdvancedScoreboard-fabric-${{ steps.version.outputs.mod_version }}-${{ steps.version.outputs.mc_version }}.jar
 
       - name: 上传构建产物 (${{ matrix.branch }})
@@ -108,15 +109,19 @@ jobs:
           pattern: jars-*
           merge-multiple: true
 
-      - name: 获取模组版本
+      - name: 获取模组版本 (核心：只取 mod_version)
+        id: get_mod_ver
         run: |
           MOD_VER=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2)
           echo "MOD_VERSION=$MOD_VER" >> $GITHUB_ENV
+          echo "mod_version=$MOD_VER" >> $GITHUB_OUTPUT
 
-      - name: 创建 GitHub Release
+      - name: 创建 GitHub Release (修正标题重复)
         uses: softprops/action-gh-release@v2
         with:
-          name: AdvancedScoreboard v${{ env.MOD_VERSION }}
+          # 标题 v1.0
+          name: v${{ env.MOD_VERSION }}
+          # 匹配推送的 tag 或自动生成 tag
           tag_name: ${{ github.ref_name || format('v{0}', env.MOD_VERSION) }}
           files: ./outputs/*.jar
           draft: false
