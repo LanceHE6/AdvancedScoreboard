@@ -44,17 +44,6 @@ AdvancedScoreboard 是一个基于 Fabric 开发的 Minecraft 模组，旨在为
 5. **事件监听**（`PlayerBreakBlockEvent.java`）
     - 监听玩家破坏方块事件，实时更新挖掘量计分板数据
 
-### 关键技术点
-1. **线程模型**
-    - 使用 `MinecraftServer#submit`/`execute` 保证 Minecraft 线程安全
-    - 定时任务采用独立线程 + `Thread.sleep` 实现，避免阻塞主线程
-2. **数据同步逻辑**
-    - 内置统计数据：通过 `Stats` API 获取玩家在线时长、飞行距离、受到伤害等内置数据
-    - 自定义数据：通过配置文件存储挖掘量等自定义统计数据
-3. **配置热更新**
-    - 轮播间隔每次循环都从配置重新读取，支持热修改
-    - 数据保存间隔同样支持运行时修改
-
 ### 配置说明
 配置文件路径：`config/advanced_scoreboard.json`
 
