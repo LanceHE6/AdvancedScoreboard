@@ -104,7 +104,7 @@ public class Task {
             String internalName = item.getInternalName();
             ScoreboardObjective objective = scoreboard.getNullableObjective(internalName);
             if (objective == null) continue;
-
+            // TODO 游戏统计的数据仍需初始化至文件中
             if (internalName.equals(Config.ONLINE_TIME_INTERNAL_NAME)) {
                 // 遍历所有在线玩家，更新在线时长
                 for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
@@ -136,7 +136,7 @@ public class Task {
                 // 遍历所有玩家，更新受到的伤害
                 for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
                     // 获取内置统计-半心
-                    int damageTaken = player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.DAMAGE_TAKEN));
+                    int damageTaken = player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.DAMAGE_TAKEN)) / 10;
 
                     ScoreAccess scoreAccess = scoreboard.getOrCreateScore(player, objective);
                     scoreAccess.setScore(damageTaken);
