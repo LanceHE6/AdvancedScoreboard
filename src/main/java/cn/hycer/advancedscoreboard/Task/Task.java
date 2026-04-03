@@ -104,44 +104,50 @@ public class Task {
             String internalName = item.getInternalName();
             ScoreboardObjective objective = scoreboard.getNullableObjective(internalName);
             if (objective == null) continue;
-
-            if (internalName.equals(Config.ONLINE_TIME_INTERNAL_NAME)) {
-                // 遍历所有在线玩家，更新在线时长
-                for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-                    // 获取内置统计：游玩时间-tick
-                    int totalPlayTicks = player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.PLAY_TIME));
-                    int totalHours = totalPlayTicks / 20 / 3600;
-
-                    // 更新计分板
-                    ScoreAccess scoreAccess = scoreboard.getOrCreateScore(player, objective);
-                    scoreAccess.setScore(totalHours);
+            switch (internalName) {
+                case Config.ONLINE_TIME_INTERNAL_NAME -> {
+                    // 遍历所有在线玩家，更新在线时长
+                    for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+                        // 获取内置统计：游玩时间-tick
+                        int totalPlayTicks = player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.PLAY_TIME));
+                        int totalHours = totalPlayTicks / 20 / 3600;
+                        // 更新配置对象
+                        String playerName = player.getName().getString();
+                        item.updateData(playerName, totalHours);
+                        // 更新计分板
+                        ScoreAccess scoreAccess = scoreboard.getOrCreateScore(player, objective);
+                        scoreAccess.setScore(totalHours);
+                    }
+                    continue;
                 }
-                continue;
-            }
-
-            if (internalName.equals(Config.ELYTRON_DISTANCE_INTERNAL_NAME)) {
-                // 遍历所有在线玩家，更新飞行距离
-                for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-                    // 获取内置统计：飞行距离
-                    int aviateOneCM = player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.AVIATE_ONE_CM)); // 单位cm
-                    int aviateOneKM = aviateOneCM / 100 / 1000; // 转化为km
-                    // 更新计分板
-                    ScoreAccess scoreAccess = scoreboard.getOrCreateScore(player, objective);
-                    scoreAccess.setScore(aviateOneKM);
+                case Config.ELYTRON_DISTANCE_INTERNAL_NAME -> {
+                    // 遍历所有在线玩家，更新飞行距离
+                    for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+                        // 获取内置统计：飞行距离
+                        int aviateOneCM = player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.AVIATE_ONE_CM)); // 单位cm
+                        int aviateOneKM = aviateOneCM / 100 / 1000; // 转化为km
+                        // 更新配置对象
+                        String playerName = player.getName().getString();
+                        item.updateData(playerName, aviateOneKM);
+                        // 更新计分板
+                        ScoreAccess scoreAccess = scoreboard.getOrCreateScore(player, objective);
+                        scoreAccess.setScore(aviateOneKM);
+                    }
+                    continue;
                 }
-                continue;
-            }
-
-            if (internalName.equals(Config.DAMAGE_TAKEN_INTERNAL_NAME)) {
-                // 遍历所有玩家，更新受到的伤害
-                for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-                    // 获取内置统计-半心
-                    int damageTaken = player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.DAMAGE_TAKEN));
-
-                    ScoreAccess scoreAccess = scoreboard.getOrCreateScore(player, objective);
-                    scoreAccess.setScore(damageTaken);
+                case Config.DAMAGE_TAKEN_INTERNAL_NAME -> {
+                    // 遍历所有玩家，更新受到的伤害
+                    for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+                        // 获取内置统计-半心
+                        int damageTaken = player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.DAMAGE_TAKEN)) / 10;
+                        // 更新配置对象
+                        String playerName = player.getName().getString();
+                        item.updateData(playerName, damageTaken);
+                        ScoreAccess scoreAccess = scoreboard.getOrCreateScore(player, objective);
+                        scoreAccess.setScore(damageTaken);
+                    }
+                    continue;
                 }
-                continue;
             }
 
             for (Map.Entry<String, Integer> entry : item.getData().entrySet()) {
