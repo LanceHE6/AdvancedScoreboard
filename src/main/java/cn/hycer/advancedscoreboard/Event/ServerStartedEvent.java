@@ -12,6 +12,7 @@ import net.minecraft.world.World;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.List;
+import java.util.Map;
 
 import static cn.hycer.advancedscoreboard.Global.Global.logger;
 import static cn.hycer.advancedscoreboard.Global.Global.scoreboard;
@@ -21,10 +22,10 @@ public class ServerStartedEvent {
     public static void onServerStarted(MinecraftServer server) {
         // 初始化全局scoreboard变量
         scoreboard = Objects.requireNonNull(server.getWorld(World.OVERWORLD).getScoreboard());
-        // 重置服务器计分板数据
-        clearInGameScoreboardData(server);
         // 注册计分板
         registerScoreboard(server);
+        // 同步配置文件中的所有数据到游戏内计分板
+        syncDataFromConfig();
         // 启动计分板轮播任务
         Task.scoreboardSwitch(server);
         // 启动更新计分板任务
@@ -48,6 +49,33 @@ public class ServerStartedEvent {
                 null
             );
             logger.debug("registered: {}", sb.getInternalName());
+        }
+    }
+
+    /**
+     * 同步配置文件中的所有数据到游戏内计分板
+     */
+    public static void syncDataFromConfig() {
+        try {
+            // 遍历所有配置的计分板
+            for (ScoreboardItem item : Global.config.getScoreboards()) {
+                String internalName = item.getInternalName();
+                ScoreboardObjective objective = scoreboard.getNullableObjective(internalName);
+                if (objective == null) continue;
+                
+                // 将配置中所有玩家数据同步到游戏计分板
+                for (Map.Entry<String, Integer> entry : item.getData().entrySet()) {
+                    String playerName = entry.getKey();
+                    int scoreValue = entry.getValue();
+
+                    ScoreHolder scoreHolder = ScoreHolder.fromName(playerName);
+                    ScoreAccess scoreAccess = scoreboard.getOrCreateScore(scoreHolder, objective);
+                    scoreAccess.setScore(scoreValue);
+                }
+            }
+            logger.info("synced all player data from config to scoreboard");
+        } catch (Exception e) {
+            logger.error("sync data from config failed: {}", e.getMessage());
         }
     }
 
