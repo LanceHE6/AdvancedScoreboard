@@ -48,6 +48,6 @@ public class AdvancedScoreboard implements ModInitializer {
             return ActionResult.PASS;
         });
 
-        logger.info("mod load success!");
+        logger.info("advancedScoreboard load success!");
     }
 }

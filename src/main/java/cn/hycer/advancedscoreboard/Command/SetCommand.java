@@ -21,7 +21,7 @@ public class SetCommand {
             .requires(source -> {
                 PermissionPredicate perms = source.getPermissions();
                 if (perms instanceof LeveledPermissionPredicate leveled) {
-                    return leveled.getLevel().isAtLeast(PermissionLevel.OWNERS);
+                    return leveled.getLevel().isAtLeast(PermissionLevel.GAMEMASTERS);
                 }
                 return true;
             })

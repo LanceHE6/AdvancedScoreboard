@@ -4,6 +4,9 @@ import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import net.minecraft.command.permission.LeveledPermissionPredicate;
+import net.minecraft.command.permission.PermissionLevel;
+import net.minecraft.command.permission.PermissionPredicate;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 
@@ -14,6 +17,13 @@ public class NotDisplayCommand {
 
     public static LiteralArgumentBuilder<ServerCommandSource> build() {
         return literal("notDisplay")
+            .requires(source -> {
+                PermissionPredicate perms = source.getPermissions();
+                if (perms instanceof LeveledPermissionPredicate leveled) {
+                    return leveled.getLevel().isAtLeast(PermissionLevel.GAMEMASTERS);
+                }
+                return false;
+            })
             .then(argument("displayName", StringArgumentType.greedyString())
                 .suggests(ASBCommand.DISPLAY_NAME_SUGGESTIONS)
                 .executes(context -> {
@@ -31,13 +41,12 @@ public class NotDisplayCommand {
                         return 0;
                     }
 
-                    String playerName = context.getSource().getName();
-                    boolean hidden = Global.config.toggleScoreboardVisibility(playerName, item.getInternalName());
+                    boolean hidden = Global.config.toggleScoreboardVisibility(item.getInternalName());
                     Global.config.saveConfig();
 
                     String message = hidden
-                        ? "已隐藏榜单: " + item.getDisplayName()
-                        : "已显示榜单: " + item.getDisplayName();
+                        ? "已全局隐藏榜单: " + item.getDisplayName()
+                        : "已全局显示榜单: " + item.getDisplayName();
                     context.getSource().sendFeedback(
                         () -> Text.literal(message),
                         false

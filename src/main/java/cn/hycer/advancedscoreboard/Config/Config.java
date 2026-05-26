@@ -8,10 +8,8 @@ import static cn.hycer.advancedscoreboard.Global.Global.logger;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -24,7 +22,7 @@ public class Config {
     public static final String MINE_COUNT_INTERNAL_NAME = "mine_count"; // 挖掘量
     public static final String PLACE_COUNT_INTERNAL_NAME = "place_count"; // 放置量
     public static final String ONLINE_TIME_INTERNAL_NAME = "online_time"; // 在线时长
-    public static final String ELYTRON_DISTANCE_INTERNAL_NAME = "elytron_distance"; // 鞘翅飞行距离
+    public static final String ELYTRA_DISTANCE_INTERNAL_NAME = "elytra_dist"; // 鞘翅飞行距离
     public static final String DAMAGE_TAKEN_INTERNAL_NAME = "damage_taken"; // 受到的伤害
     // JSON 解析器（格式化输出）
     @JsonIgnore
@@ -35,7 +33,7 @@ public class Config {
     private int switchInterval; // 轮播切换周期s
     private int saveInterval; // 数据保存周期s
     private int maxDisplayNum; // 榜单最大显示玩家数量
-    private Map<String, Set<String>> playerPreferences = new HashMap<>(); // 玩家榜单偏好，key=玩家名，value=隐藏的internalName集合
+    private Set<String> hiddenScoreboards = new HashSet<>(); // 全局隐藏的榜单 internalName 集合
     private List<ScoreboardItem> scoreboards = new ArrayList<>(); // 计分板列表
 
     // 非JSON字段
@@ -91,7 +89,7 @@ public class Config {
 
         // 初始化鞘翅飞行距离榜
         ScoreboardItem elytronBoard = new ScoreboardItem();
-        elytronBoard.setInternalName(ELYTRON_DISTANCE_INTERNAL_NAME);
+        elytronBoard.setInternalName(ELYTRA_DISTANCE_INTERNAL_NAME);
         elytronBoard.setDisplayName("飞行距离(km)");
 
         // 初始化受到伤害榜
@@ -129,8 +127,15 @@ public class Config {
             this.switchInterval = loadedConfig.getSwitchInterval();
             this.saveInterval = loadedConfig.getSaveInterval();
             this.maxDisplayNum = loadedConfig.getMaxDisplayNum() > 0 ? loadedConfig.getMaxDisplayNum() : 15;
-            this.playerPreferences = loadedConfig.getPlayerPreferences() != null ? loadedConfig.getPlayerPreferences() : new HashMap<>();
+            this.hiddenScoreboards = loadedConfig.getHiddenScoreboards() != null ? loadedConfig.getHiddenScoreboards() : new HashSet<>();
             this.scoreboards = loadedConfig.getScoreboards();
+            // 迁移旧版配置：elytron_distance → elytra_dist
+            for (ScoreboardItem item : this.scoreboards) {
+                if ("elytron_distance".equals(item.getInternalName())) {
+                    item.setInternalName(ELYTRA_DISTANCE_INTERNAL_NAME);
+                    logger.info("migrated old internalName 'elytron_distance' to '{}'", ELYTRA_DISTANCE_INTERNAL_NAME);
+                }
+            }
             logger.info("config file loaded successfully: {}", this.configFile.getAbsolutePath());
         } catch (IOException e) {
             logger.error("load config failed, using default config: {}", e);
@@ -253,35 +258,24 @@ public class Config {
         return configFile;
     }
 
-    public Map<String, Set<String>> getPlayerPreferences() {
-        return playerPreferences;
+    public Set<String> getHiddenScoreboards() {
+        return hiddenScoreboards;
     }
 
-    public void setPlayerPreferences(Map<String, Set<String>> playerPreferences) {
-        this.playerPreferences = playerPreferences != null ? playerPreferences : new HashMap<>();
-    }
-
-    /**
-     * 获取指定玩家隐藏的计分板 internalName 集合
-     */
-    public Set<String> getHiddenScoreboards(String playerName) {
-        return playerPreferences.getOrDefault(playerName, new HashSet<>());
+    public void setHiddenScoreboards(Set<String> hiddenScoreboards) {
+        this.hiddenScoreboards = hiddenScoreboards != null ? hiddenScoreboards : new HashSet<>();
     }
 
     /**
-     * 切换指定玩家对某计分板的显示/隐藏状态
+     * 全局切换某计分板的显示/隐藏状态
      * @return true = 现在已隐藏，false = 现在已显示
      */
-    public boolean toggleScoreboardVisibility(String playerName, String internalName) {
-        Set<String> hidden = playerPreferences.computeIfAbsent(playerName, k -> new HashSet<>());
-        if (hidden.contains(internalName)) {
-            hidden.remove(internalName);
-            if (hidden.isEmpty()) {
-                playerPreferences.remove(playerName);
-            }
+    public boolean toggleScoreboardVisibility(String internalName) {
+        if (hiddenScoreboards.contains(internalName)) {
+            hiddenScoreboards.remove(internalName);
             return false;
         } else {
-            hidden.add(internalName);
+            hiddenScoreboards.add(internalName);
             return true;
         }
     }
