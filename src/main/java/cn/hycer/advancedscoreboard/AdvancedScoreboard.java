@@ -2,12 +2,14 @@ package cn.hycer.advancedscoreboard;
 
 import cn.hycer.advancedscoreboard.Config.Config;
 import cn.hycer.advancedscoreboard.Event.PlayerBreakBlockEvent;
+import cn.hycer.advancedscoreboard.Event.PlayerPlaceBlockEvent;
 import cn.hycer.advancedscoreboard.Event.ServerStartedEvent;
 import cn.hycer.advancedscoreboard.Global.Global;
 import static cn.hycer.advancedscoreboard.Global.Global.logger;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.loader.api.FabricLoader;
 import org.apache.logging.log4j.LogManager;
 
@@ -31,6 +33,10 @@ public class AdvancedScoreboard implements ModInitializer {
         //注册玩家破坏方块的事件
         PlayerBlockBreakEvents.AFTER.register(((world, playerEntity, blockPos, blockState, blockEntity) ->
                 PlayerBreakBlockEvent.onBreak(playerEntity)));
+
+        //注册玩家放置方块的事件
+        UseBlockCallback.EVENT.register(((playerEntity, world, hand, blockHitResult) ->
+                PlayerPlaceBlockEvent.onPlace(playerEntity)));
 
         logger.info("mod load success!");
     }

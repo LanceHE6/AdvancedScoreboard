@@ -18,6 +18,7 @@ public class Config {
     public static final String CONFIG_FILE_NAME = "advanced_scoreboard.json";
 
     public static final String MINE_COUNT_INTERNAL_NAME = "mine_count"; // 挖掘量
+    public static final String PLACE_COUNT_INTERNAL_NAME = "place_count"; // 放置量
     public static final String ONLINE_TIME_INTERNAL_NAME = "online_time"; // 在线时长
     public static final String ELYTRON_DISTANCE_INTERNAL_NAME = "elytron_distance"; // 鞘翅飞行距离
     public static final String DAMAGE_TAKEN_INTERNAL_NAME = "damage_taken"; // 受到的伤害
@@ -69,6 +70,11 @@ public class Config {
         mineCountBoard.setInternalName(MINE_COUNT_INTERNAL_NAME);
         mineCountBoard.setDisplayName("===挖掘量===");
 
+        // 初始化放置榜
+        ScoreboardItem placeCountBoard = new ScoreboardItem();
+        placeCountBoard.setInternalName(PLACE_COUNT_INTERNAL_NAME);
+        placeCountBoard.setDisplayName("===放置量===");
+
         // 初始化在线时长榜
         ScoreboardItem onlineTimeBoard = new ScoreboardItem();
         onlineTimeBoard.setInternalName(ONLINE_TIME_INTERNAL_NAME);
@@ -86,6 +92,7 @@ public class Config {
 
         // 添加到计分板列表
         this.scoreboards.add(mineCountBoard);
+        this.scoreboards.add(placeCountBoard);
         this.scoreboards.add(onlineTimeBoard);
         this.scoreboards.add(elytronBoard);
         this.scoreboards.add(damageTakenBoard);
