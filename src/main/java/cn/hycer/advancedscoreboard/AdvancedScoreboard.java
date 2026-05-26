@@ -1,5 +1,6 @@
 package cn.hycer.advancedscoreboard;
 
+import cn.hycer.advancedscoreboard.Command.ASBCommand;
 import cn.hycer.advancedscoreboard.Config.Config;
 import cn.hycer.advancedscoreboard.Event.PlayerBreakBlockEvent;
 import cn.hycer.advancedscoreboard.Event.PlayerPlaceBlockEvent;
@@ -26,6 +27,9 @@ public class AdvancedScoreboard implements ModInitializer {
             logger.error("could not load config file, mod did not load, err: {}", e.getMessage());
             return;
         }
+
+        //注册指令
+        ASBCommand.register();
 
         //注册服务器启动完毕的事件
         ServerLifecycleEvents.SERVER_STARTED.register(ServerStartedEvent::onServerStarted);
