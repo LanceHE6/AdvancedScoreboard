@@ -31,6 +31,7 @@ public class Config {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
             .enable(SerializationFeature.INDENT_OUTPUT);
     // JSON 配置项
+    private String border; // 榜单显示名边框
     private int switchInterval; // 轮播切换周期s
     private int saveInterval; // 数据保存周期s
     private int maxDisplayNum; // 榜单最大显示玩家数量
@@ -68,6 +69,7 @@ public class Config {
      */
     private void initDefaultConfig() {
         // 初始化切换周期和保存周期，默认5s
+        border = "===";
         switchInterval = 5;
         saveInterval = 5;
         maxDisplayNum = 15;
@@ -75,27 +77,27 @@ public class Config {
         // 初始化挖掘榜
         ScoreboardItem mineCountBoard = new ScoreboardItem();
         mineCountBoard.setInternalName(MINE_COUNT_INTERNAL_NAME);
-        mineCountBoard.setDisplayName("===挖掘量===");
+        mineCountBoard.setDisplayName("挖掘量");
 
         // 初始化放置榜
         ScoreboardItem placeCountBoard = new ScoreboardItem();
         placeCountBoard.setInternalName(PLACE_COUNT_INTERNAL_NAME);
-        placeCountBoard.setDisplayName("===放置量===");
+        placeCountBoard.setDisplayName("放置量");
 
         // 初始化在线时长榜
         ScoreboardItem onlineTimeBoard = new ScoreboardItem();
         onlineTimeBoard.setInternalName(ONLINE_TIME_INTERNAL_NAME);
-        onlineTimeBoard.setDisplayName("===在线时长(h)===");
+        onlineTimeBoard.setDisplayName("在线时长(h)");
 
         // 初始化鞘翅飞行距离榜
         ScoreboardItem elytronBoard = new ScoreboardItem();
         elytronBoard.setInternalName(ELYTRON_DISTANCE_INTERNAL_NAME);
-        elytronBoard.setDisplayName("===飞行距离(km)===");
+        elytronBoard.setDisplayName("飞行距离(km)");
 
-        // 初始化鞘翅飞行距离榜
+        // 初始化受到伤害榜
         ScoreboardItem damageTakenBoard = new ScoreboardItem();
         damageTakenBoard.setInternalName(DAMAGE_TAKEN_INTERNAL_NAME);
-        damageTakenBoard.setDisplayName("===受到伤害===");
+        damageTakenBoard.setDisplayName("受到伤害");
 
         // 添加到计分板列表
         this.scoreboards.add(mineCountBoard);
@@ -123,6 +125,7 @@ public class Config {
                     Config.class
             );
             // 覆盖当前对象的配置项
+            this.border = loadedConfig.getBorder() != null ? loadedConfig.getBorder() : "===";
             this.switchInterval = loadedConfig.getSwitchInterval();
             this.saveInterval = loadedConfig.getSaveInterval();
             this.maxDisplayNum = loadedConfig.getMaxDisplayNum() > 0 ? loadedConfig.getMaxDisplayNum() : 15;
@@ -175,6 +178,7 @@ public class Config {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("AdvancedScoreboardConfig {\n");
+        sb.append("  border = ").append(border).append("\n");
         sb.append("  switchInterval = ").append(switchInterval).append("\n");
         sb.append("  saveInterval = ").append(saveInterval).append("\n");
         sb.append("  maxDisplayNum = ").append(maxDisplayNum).append("\n");
@@ -192,6 +196,21 @@ public class Config {
         sb.append("  configFile = ").append(configFile != null ? configFile.getAbsolutePath() : "null").append("\n");
         sb.append("}");
         return sb.toString();
+    }
+
+    public String getBorder() {
+        return border;
+    }
+
+    public void setBorder(String border) {
+        this.border = border != null ? border : "===";
+    }
+
+    /**
+     * 获取带边框的显示名（border + displayName + border）
+     */
+    public String getFormattedDisplayName(ScoreboardItem item) {
+        return border + item.getDisplayName() + border;
     }
 
     public int getSwitchInterval() {

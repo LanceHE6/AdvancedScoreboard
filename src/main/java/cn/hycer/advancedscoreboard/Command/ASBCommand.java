@@ -1,6 +1,7 @@
 package cn.hycer.advancedscoreboard.Command;
 
 import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
+import cn.hycer.advancedscoreboard.Event.ServerStartedEvent;
 import cn.hycer.advancedscoreboard.Global.Global;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -71,6 +72,21 @@ public class ASBCommand {
                                 })
                             )
                         )
+                        .then(literal("border")
+                            .then(argument("value", StringArgumentType.word())
+                                .executes(context -> {
+                                    String value = StringArgumentType.getString(context, "value");
+                                    Global.config.setBorder(value);
+                                    Global.config.saveConfig();
+                                    ServerStartedEvent.refreshAllDisplayNames();
+                                    context.getSource().sendFeedback(
+                                        () -> Text.literal("边框已设置为 " + value),
+                                        false
+                                    );
+                                    return 1;
+                                })
+                            )
+                        )
                     )
                     .then(literal("scoreboard")
                         .then(argument("displayName", StringArgumentType.greedyString())
@@ -96,7 +112,7 @@ public class ASBCommand {
                                 }
 
                                 context.getSource().sendFeedback(
-                                    () -> Text.literal("=== " + item.getDisplayName() + " ==="),
+                                    () -> Text.literal(Global.config.getFormattedDisplayName(item)),
                                     false
                                 );
 

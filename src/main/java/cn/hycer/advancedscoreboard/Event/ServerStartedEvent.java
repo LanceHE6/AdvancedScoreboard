@@ -34,21 +34,36 @@ public class ServerStartedEvent {
     public static void registerScoreboard(MinecraftServer server) {
         List<ScoreboardItem> scoreboards = Global.config.getScoreboards();
         for (ScoreboardItem sb : scoreboards) {
+            String formattedName = Global.config.getFormattedDisplayName(sb);
             ScoreboardObjective scoreboardObj = scoreboard.getNullableObjective(sb.getInternalName());
             if (scoreboardObj != null) {
-                scoreboardObj.setDisplayName(Text.literal(sb.getDisplayName()));
+                scoreboardObj.setDisplayName(Text.literal(formattedName));
                 continue;
             }
             scoreboardObj = scoreboard.addObjective(
                 sb.getInternalName(),
                 ScoreboardCriterion.DUMMY,
-                Text.literal(sb.getDisplayName()),
+                Text.literal(formattedName),
                 ScoreboardCriterion.RenderType.INTEGER,
                 true,
                 null
             );
             logger.debug("registered: {}", sb.getInternalName());
         }
+    }
+
+    /**
+     * 刷新所有已注册计分板的显示名（border 变更后调用）
+     */
+    public static void refreshAllDisplayNames() {
+        if (scoreboard == null) return;
+        for (ScoreboardItem sb : Global.config.getScoreboards()) {
+            ScoreboardObjective obj = scoreboard.getNullableObjective(sb.getInternalName());
+            if (obj != null) {
+                obj.setDisplayName(Text.literal(Global.config.getFormattedDisplayName(sb)));
+            }
+        }
+        logger.info("all scoreboard display names refreshed");
     }
 
     /**
