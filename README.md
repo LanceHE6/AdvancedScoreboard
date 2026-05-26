@@ -22,13 +22,13 @@ AdvancedScoreboard 是一个基于 Fabric 开发的 Minecraft 模组，旨在为
 6. **命令系统**
     - [x] 查询榜单：玩家可通过 `/asb scoreboard` 指令查询任意榜单的全部数据
     - [x] 配置项修改：OP 可通过 `/asb set` 指令动态修改轮播间隔、保存间隔、最大显示数量
-    - [x] 个性化显示：玩家可通过 `/asb notDisplay` 隐藏不想看到的榜单，每个玩家独立控制
+    - [ ] ~~个性化显示：玩家可通过 `/asb notDisplay` 隐藏不想看到的榜单，每个玩家独立控制~~ 暂无法实现，只能全局控制
 
 ### 指令系统
 
 ```text
 /asb
-├─ set                          # 仅 OP（OWNERS 级别）可用
+├─ set                          # 仅 OP 可用
 │  ├─ switchInterval <value>    # 修改轮播间隔（秒，最小 1）
 │  ├─ saveInterval <value>      # 修改保存间隔（秒，最小 1）
 │  ├─ maxDisplayNum <value>     # 修改榜单最大显示玩家数（最小 1）
@@ -37,7 +37,7 @@ AdvancedScoreboard 是一个基于 Fabric 开发的 Minecraft 模组，旨在为
 ├─ scoreboard <displayName>     # 所有玩家可用，查询指定榜单的全部数据（不受最大显示数量限制）
 │                               # 支持 Tab 自动补全 displayName
 │
-└─ notDisplay <displayName>     # 所有玩家可用，切换指定榜单的显示/隐藏状态（仅对自己生效）
+└─ notDisplay <displayName>     # OP 玩家可用，切换指定榜单的显示/隐藏状态
                                 # 支持 Tab 自动补全 displayName
 ```
 
