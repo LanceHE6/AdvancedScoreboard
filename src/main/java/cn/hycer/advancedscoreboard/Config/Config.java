@@ -8,7 +8,11 @@ import static cn.hycer.advancedscoreboard.Global.Global.logger;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 根配置类
@@ -30,6 +34,7 @@ public class Config {
     private int switchInterval; // 轮播切换周期s
     private int saveInterval; // 数据保存周期s
     private int maxDisplayNum; // 榜单最大显示玩家数量
+    private Map<String, Set<String>> playerPreferences = new HashMap<>(); // 玩家榜单偏好，key=玩家名，value=隐藏的internalName集合
     private List<ScoreboardItem> scoreboards = new ArrayList<>(); // 计分板列表
 
     // 非JSON字段
@@ -121,6 +126,7 @@ public class Config {
             this.switchInterval = loadedConfig.getSwitchInterval();
             this.saveInterval = loadedConfig.getSaveInterval();
             this.maxDisplayNum = loadedConfig.getMaxDisplayNum() > 0 ? loadedConfig.getMaxDisplayNum() : 15;
+            this.playerPreferences = loadedConfig.getPlayerPreferences() != null ? loadedConfig.getPlayerPreferences() : new HashMap<>();
             this.scoreboards = loadedConfig.getScoreboards();
             logger.info("config file loaded successfully: {}", this.configFile.getAbsolutePath());
         } catch (IOException e) {
@@ -226,5 +232,38 @@ public class Config {
     @JsonIgnore
     public File getConfigFile() {
         return configFile;
+    }
+
+    public Map<String, Set<String>> getPlayerPreferences() {
+        return playerPreferences;
+    }
+
+    public void setPlayerPreferences(Map<String, Set<String>> playerPreferences) {
+        this.playerPreferences = playerPreferences != null ? playerPreferences : new HashMap<>();
+    }
+
+    /**
+     * 获取指定玩家隐藏的计分板 internalName 集合
+     */
+    public Set<String> getHiddenScoreboards(String playerName) {
+        return playerPreferences.getOrDefault(playerName, new HashSet<>());
+    }
+
+    /**
+     * 切换指定玩家对某计分板的显示/隐藏状态
+     * @return true = 现在已隐藏，false = 现在已显示
+     */
+    public boolean toggleScoreboardVisibility(String playerName, String internalName) {
+        Set<String> hidden = playerPreferences.computeIfAbsent(playerName, k -> new HashSet<>());
+        if (hidden.contains(internalName)) {
+            hidden.remove(internalName);
+            if (hidden.isEmpty()) {
+                playerPreferences.remove(playerName);
+            }
+            return false;
+        } else {
+            hidden.add(internalName);
+            return true;
+        }
     }
 }

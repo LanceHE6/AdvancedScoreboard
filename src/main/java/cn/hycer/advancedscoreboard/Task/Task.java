@@ -3,6 +3,7 @@ package cn.hycer.advancedscoreboard.Task;
 import static cn.hycer.advancedscoreboard.Global.Global.logger;
 import static cn.hycer.advancedscoreboard.Global.Global.scoreboard;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -11,6 +12,7 @@ import java.util.stream.Collectors;
 import cn.hycer.advancedscoreboard.Config.Config;
 import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
+import net.minecraft.network.packet.s2c.play.ScoreboardDisplayS2CPacket;
 import net.minecraft.scoreboard.ScoreAccess;
 import net.minecraft.scoreboard.ScoreHolder;
 import net.minecraft.scoreboard.ScoreboardDisplaySlot;
@@ -22,13 +24,13 @@ import net.minecraft.stat.Stats;
 
 public class Task {
 
+    // 每位玩家的当前轮播索引
+    private static final Map<String, Integer> playerRotationIndex = new HashMap<>();
+
     // 轮播切换任务
     public static void scoreboardSwitch(MinecraftServer server) {
         server.submit(() -> {
             new Thread(() -> {
-                // 当前显示的计分板索引
-                final int[] index = {0};
-
                 while (!server.isStopped()) {
                     try {
                         // 每次循环都从配置读取间隔，支持热修改
@@ -37,28 +39,39 @@ public class Task {
                         Thread.sleep(intervalMs);
 
                         server.execute(() -> {
-                            // 获取配置中的所有计分板列表
-                            List<ScoreboardItem> scoreboards = Global.config.getScoreboards();
-                            if (scoreboards == null || scoreboards.isEmpty()) {
+                            List<ScoreboardItem> allScoreboards = Global.config.getScoreboards();
+                            if (allScoreboards == null || allScoreboards.isEmpty()) {
                                 return;
                             }
 
-                            // 防止索引越界
-                            if (index[0] >= scoreboards.size()) {
-                                index[0] = 0;
+                            // 为每位在线玩家单独发送计分板显示包
+                            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+                                String playerName = player.getName().getString();
+
+                                // 过滤该玩家隐藏的榜单
+                                Set<String> hidden = Global.config.getHiddenScoreboards(playerName);
+                                List<ScoreboardItem> visibleScoreboards = allScoreboards.stream()
+                                    .filter(sb -> !hidden.contains(sb.getInternalName()))
+                                    .toList();
+
+                                if (visibleScoreboards.isEmpty()) {
+                                    continue;
+                                }
+
+                                // 推进该玩家的轮播索引
+                                int index = playerRotationIndex.getOrDefault(playerName, -1);
+                                index = (index + 1) % visibleScoreboards.size();
+                                playerRotationIndex.put(playerName, index);
+
+                                // 向该玩家单独发送显示包
+                                ScoreboardItem currentItem = visibleScoreboards.get(index);
+                                ScoreboardObjective objective = scoreboard.getNullableObjective(currentItem.getInternalName());
+                                if (objective != null) {
+                                    player.networkHandler.sendPacket(
+                                        new ScoreboardDisplayS2CPacket(ScoreboardDisplaySlot.SIDEBAR, objective)
+                                    );
+                                }
                             }
-
-                            // 获取当前要显示的计分板
-                            ScoreboardItem currentItem = scoreboards.get(index[0]);
-                            ScoreboardObjective objective = scoreboard.getNullableObjective(currentItem.getInternalName());
-
-                            // 切换显示
-                            if (objective != null) {
-                                scoreboard.setObjectiveSlot(ScoreboardDisplaySlot.SIDEBAR, objective);
-                            }
-
-                            // 索引 +1，下次切换下一个
-                            index[0]++;
                         });
                     } catch (InterruptedException e) {
                         logger.error(e.getMessage());

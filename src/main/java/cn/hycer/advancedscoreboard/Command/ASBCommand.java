@@ -120,6 +120,45 @@ public class ASBCommand {
                             })
                         )
                     )
+                    .then(literal("notDisplay")
+                        .then(argument("displayName", StringArgumentType.greedyString())
+                            .suggests((context, builder) -> {
+                                for (ScoreboardItem item : Global.config.getScoreboards()) {
+                                    builder.suggest(item.getDisplayName());
+                                }
+                                return builder.buildFuture();
+                            })
+                            .executes(context -> {
+                                String displayName = StringArgumentType.getString(context, "displayName");
+                                ScoreboardItem item = Global.config.getScoreboards().stream()
+                                    .filter(sb -> displayName.equals(sb.getDisplayName()))
+                                    .findFirst()
+                                    .orElse(null);
+
+                                if (item == null) {
+                                    context.getSource().sendFeedback(
+                                        () -> Text.literal("未找到榜单: " + displayName),
+                                        false
+                                    );
+                                    return 0;
+                                }
+
+                                String playerName = context.getSource().getName();
+                                boolean hidden = Global.config.toggleScoreboardVisibility(playerName, item.getInternalName());
+                                Global.config.saveConfig();
+
+                                String message = hidden
+                                    ? "已隐藏榜单: " + item.getDisplayName()
+                                    : "已显示榜单: " + item.getDisplayName();
+                                context.getSource().sendFeedback(
+                                    () -> Text.literal(message),
+                                    false
+                                );
+
+                                return 1;
+                            })
+                        )
+                    )
             );
         });
     }
