@@ -1,12 +1,16 @@
 package cn.hycer.advancedscoreboard.Command;
 
+import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.command.permission.LeveledPermissionPredicate;
 import net.minecraft.command.permission.PermissionLevel;
 import net.minecraft.command.permission.PermissionPredicate;
 import net.minecraft.text.Text;
+
+import java.util.Map;
 
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
@@ -17,14 +21,14 @@ public class ASBCommand {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             dispatcher.register(
                 literal("asb")
-                    .requires(source -> {
-                        PermissionPredicate perms = source.getPermissions();
-                        if (perms instanceof LeveledPermissionPredicate leveled) {
-                            return leveled.getLevel().isAtLeast(PermissionLevel.OWNERS);
-                        }
-                        return true;
-                    })
                     .then(literal("set")
+                        .requires(source -> {
+                            PermissionPredicate perms = source.getPermissions();
+                            if (perms instanceof LeveledPermissionPredicate leveled) {
+                                return leveled.getLevel().isAtLeast(PermissionLevel.OWNERS);
+                            }
+                            return true;
+                        })
                         .then(literal("switchInterval")
                             .then(argument("value", IntegerArgumentType.integer(1))
                                 .executes(context -> {
@@ -66,6 +70,54 @@ public class ASBCommand {
                                     return 1;
                                 })
                             )
+                        )
+                    )
+                    .then(literal("scoreboard")
+                        .then(argument("displayName", StringArgumentType.greedyString())
+                            .suggests((context, builder) -> {
+                                for (ScoreboardItem item : Global.config.getScoreboards()) {
+                                    builder.suggest(item.getDisplayName());
+                                }
+                                return builder.buildFuture();
+                            })
+                            .executes(context -> {
+                                String displayName = StringArgumentType.getString(context, "displayName");
+                                ScoreboardItem item = Global.config.getScoreboards().stream()
+                                    .filter(sb -> displayName.equals(sb.getDisplayName()))
+                                    .findFirst()
+                                    .orElse(null);
+
+                                if (item == null) {
+                                    context.getSource().sendFeedback(
+                                        () -> Text.literal("未找到榜单: " + displayName),
+                                        false
+                                    );
+                                    return 0;
+                                }
+
+                                context.getSource().sendFeedback(
+                                    () -> Text.literal("=== " + item.getDisplayName() + " ==="),
+                                    false
+                                );
+
+                                if (item.getData().isEmpty()) {
+                                    context.getSource().sendFeedback(
+                                        () -> Text.literal("暂无数据"),
+                                        false
+                                    );
+                                } else {
+                                    item.getData().entrySet().stream()
+                                        .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                                        .forEach(entry ->
+                                            context.getSource().sendFeedback(
+                                                () -> Text.literal(entry.getKey() + " - " + entry.getValue()),
+                                                false
+                                            )
+                                        );
+                                }
+
+                                return 1;
+                            })
                         )
                     )
             );
