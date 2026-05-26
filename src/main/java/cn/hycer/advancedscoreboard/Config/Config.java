@@ -29,6 +29,7 @@ public class Config {
     // JSON 配置项
     private int switchInterval; // 轮播切换周期s
     private int saveInterval; // 数据保存周期s
+    private int maxDisplayNum; // 榜单最大显示玩家数量
     private List<ScoreboardItem> scoreboards = new ArrayList<>(); // 计分板列表
 
     // 非JSON字段
@@ -64,6 +65,7 @@ public class Config {
         // 初始化切换周期和保存周期，默认5s
         switchInterval = 5;
         saveInterval = 5;
+        maxDisplayNum = 15;
 
         // 初始化挖掘榜
         ScoreboardItem mineCountBoard = new ScoreboardItem();
@@ -118,6 +120,7 @@ public class Config {
             // 覆盖当前对象的配置项
             this.switchInterval = loadedConfig.getSwitchInterval();
             this.saveInterval = loadedConfig.getSaveInterval();
+            this.maxDisplayNum = loadedConfig.getMaxDisplayNum() > 0 ? loadedConfig.getMaxDisplayNum() : 15;
             this.scoreboards = loadedConfig.getScoreboards();
             logger.info("config file loaded successfully: {}", this.configFile.getAbsolutePath());
         } catch (IOException e) {
@@ -168,6 +171,7 @@ public class Config {
         sb.append("AdvancedScoreboardConfig {\n");
         sb.append("  switchInterval = ").append(switchInterval).append("\n");
         sb.append("  saveInterval = ").append(saveInterval).append("\n");
+        sb.append("  maxDisplayNum = ").append(maxDisplayNum).append("\n");
         sb.append("  scoreboards (").append(scoreboards.size()).append("个)：\n");
 
         for (int i = 0; i < scoreboards.size(); i++) {
@@ -200,6 +204,15 @@ public class Config {
     public void setSaveInterval(int saveInterval) {
         // 最小间隔1秒
         this.saveInterval = Math.max(1, saveInterval);
+    }
+
+    public int getMaxDisplayNum() {
+        return maxDisplayNum;
+    }
+
+    public void setMaxDisplayNum(int maxDisplayNum) {
+        // 最少显示1名玩家
+        this.maxDisplayNum = Math.max(1, maxDisplayNum);
     }
 
     public List<ScoreboardItem> getScoreboards() {

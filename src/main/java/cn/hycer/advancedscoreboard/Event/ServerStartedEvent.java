@@ -12,7 +12,6 @@ import net.minecraft.world.World;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.List;
-import java.util.Map;
 
 import static cn.hycer.advancedscoreboard.Global.Global.logger;
 import static cn.hycer.advancedscoreboard.Global.Global.scoreboard;
@@ -63,15 +62,8 @@ public class ServerStartedEvent {
                 ScoreboardObjective objective = scoreboard.getNullableObjective(internalName);
                 if (objective == null) continue;
                 
-                // 将配置中所有玩家数据同步到游戏计分板
-                for (Map.Entry<String, Integer> entry : item.getData().entrySet()) {
-                    String playerName = entry.getKey();
-                    int scoreValue = entry.getValue();
-
-                    ScoreHolder scoreHolder = ScoreHolder.fromName(playerName);
-                    ScoreAccess scoreAccess = scoreboard.getOrCreateScore(scoreHolder, objective);
-                    scoreAccess.setScore(scoreValue);
-                }
+                // 按 maxDisplayNum 限制同步玩家数据到游戏计分板
+                Task.syncTopNToScoreboard(objective, item.getData(), Global.config.getMaxDisplayNum());
             }
             logger.info("synced all player data from config to scoreboard");
         } catch (Exception e) {

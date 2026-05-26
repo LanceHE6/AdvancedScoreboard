@@ -5,6 +5,8 @@ import static cn.hycer.advancedscoreboard.Global.Global.scoreboard;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import cn.hycer.advancedscoreboard.Config.Config;
 import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
@@ -12,6 +14,7 @@ import cn.hycer.advancedscoreboard.Global.Global;
 import net.minecraft.scoreboard.ScoreAccess;
 import net.minecraft.scoreboard.ScoreHolder;
 import net.minecraft.scoreboard.ScoreboardDisplaySlot;
+import net.minecraft.scoreboard.ScoreboardEntry;
 import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -142,15 +145,38 @@ public class Task {
                 }
             }
 
-            // 将配置中所有玩家数据（包括离线玩家）同步到游戏计分板
-            for (Map.Entry<String, Integer> entry : item.getData().entrySet()) {
-                String playerName = entry.getKey();
-                int scoreValue = entry.getValue();
+            // 按 maxDisplayNum 限制同步玩家数据到游戏计分板
+            syncTopNToScoreboard(objective, item.getData(), Global.config.getMaxDisplayNum());
+        }
+    }
 
-                ScoreHolder scoreHolder = ScoreHolder.fromName(playerName);
-                ScoreAccess scoreAccess = scoreboard.getOrCreateScore(scoreHolder, objective);
-                scoreAccess.setScore(scoreValue);
+    /**
+     * 将数据按分数降序排列后，仅同步前 maxDisplay 名玩家到游戏内计分板
+     * 同时移除不在前 N 名的玩家条目
+     */
+    public static void syncTopNToScoreboard(ScoreboardObjective objective, Map<String, Integer> data, int maxDisplay) {
+        // 按分数降序排序，取前 maxDisplay 名
+        List<Map.Entry<String, Integer>> topEntries = data.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .limit(maxDisplay)
+                .toList();
+
+        Set<String> topPlayerNames = topEntries.stream()
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+
+        // 移除不在前 N 名的玩家条目
+        for (ScoreboardEntry entry : scoreboard.getScoreboardEntries(objective)) {
+            if (!topPlayerNames.contains(entry.owner())) {
+                scoreboard.removeScore(ScoreHolder.fromName(entry.owner()), objective);
             }
+        }
+
+        // 添加 / 更新前 N 名玩家的分数
+        for (Map.Entry<String, Integer> entry : topEntries) {
+            ScoreHolder scoreHolder = ScoreHolder.fromName(entry.getKey());
+            ScoreAccess scoreAccess = scoreboard.getOrCreateScore(scoreHolder, objective);
+            scoreAccess.setScore(entry.getValue());
         }
     }
 
