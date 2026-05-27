@@ -4,9 +4,6 @@ import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import net.minecraft.command.permission.LeveledPermissionPredicate;
-import net.minecraft.command.permission.PermissionLevel;
-import net.minecraft.command.permission.PermissionPredicate;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 
@@ -17,13 +14,7 @@ public class NotDisplayCommand {
 
     public static LiteralArgumentBuilder<ServerCommandSource> build() {
         return literal("notDisplay")
-            .requires(source -> {
-                PermissionPredicate perms = source.getPermissions();
-                if (perms instanceof LeveledPermissionPredicate leveled) {
-                    return leveled.getLevel().isAtLeast(PermissionLevel.GAMEMASTERS);
-                }
-                return false;
-            })
+            .requires(source -> source.hasPermissionLevel(2))
             .then(argument("displayName", StringArgumentType.greedyString())
                 .suggests(ASBCommand.DISPLAY_NAME_SUGGESTIONS)
                 .executes(context -> {
