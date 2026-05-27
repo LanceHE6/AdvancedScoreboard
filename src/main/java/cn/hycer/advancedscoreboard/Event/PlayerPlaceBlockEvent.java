@@ -9,29 +9,31 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.scoreboard.ScoreAccess;
 import net.minecraft.scoreboard.ScoreHolder;
 import net.minecraft.scoreboard.ScoreboardObjective;
+import net.minecraft.util.ActionResult;
 
-public class PlayerBreakBlockEvent {
+public class PlayerPlaceBlockEvent {
 
     // 从配置文件中获取计分板名称
-    private static final String internalName = Config.MINE_COUNT_INTERNAL_NAME;
+    private static final String internalName = Config.PLACE_COUNT_INTERNAL_NAME;
 
-    public static void onBreak(PlayerEntity player) {
+    public static ActionResult onPlace(PlayerEntity player) {
 
-        ScoreboardItem mineCountScoreboard = Global.config.getScoreboardByInternalName(internalName);
+        ScoreboardItem placeCountScoreboard = Global.config.getScoreboardByInternalName(internalName);
         //获取玩家的分数
         String playerName = player.getName().getString();
-        int playerScore = mineCountScoreboard.getDataValue(playerName, 0);
+        int playerScore = placeCountScoreboard.getDataValue(playerName, 0);
         //更新玩家的分数
-        Global.config.getScoreboardByInternalName(Config.MINE_COUNT_INTERNAL_NAME).updateData(playerName, ++playerScore);
-        
+        Global.config.getScoreboardByInternalName(Config.PLACE_COUNT_INTERNAL_NAME).updateData(playerName, ++playerScore);
+
         // 同步到游戏内计分板
         syncToScoreboard(playerName, playerScore);
-        
+
         logger.debug(Global.config.toString());
+        return ActionResult.PASS;
     }
-    
+
     /**
-     * 同步玩家挖掘数据到游戏内计分板
+     * 同步玩家放置数据到游戏内计分板
      */
     private static void syncToScoreboard(String playerName, int playerScore) {
         try {

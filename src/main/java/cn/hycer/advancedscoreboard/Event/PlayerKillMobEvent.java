@@ -5,40 +5,41 @@ import static cn.hycer.advancedscoreboard.Global.Global.logger;
 import cn.hycer.advancedscoreboard.Config.Config;
 import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.scoreboard.ScoreAccess;
 import net.minecraft.scoreboard.ScoreHolder;
 import net.minecraft.scoreboard.ScoreboardObjective;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 
-public class PlayerBreakBlockEvent {
+public class PlayerKillMobEvent {
 
-    // 从配置文件中获取计分板名称
-    private static final String internalName = Config.MINE_COUNT_INTERNAL_NAME;
+    private static final String internalName = Config.MOB_KILLS_INTERNAL_NAME;
 
-    public static void onBreak(PlayerEntity player) {
+    public static void onKill(ServerWorld world, Entity entity, LivingEntity killedEntity) {
+        if (!(entity instanceof ServerPlayerEntity player)) {
+            return;
+        }
+        if (killedEntity instanceof PlayerEntity) {
+            return;
+        }
 
-        ScoreboardItem mineCountScoreboard = Global.config.getScoreboardByInternalName(internalName);
-        //获取玩家的分数
+        ScoreboardItem mobKillsScoreboard = Global.config.getScoreboardByInternalName(internalName);
         String playerName = player.getName().getString();
-        int playerScore = mineCountScoreboard.getDataValue(playerName, 0);
-        //更新玩家的分数
-        Global.config.getScoreboardByInternalName(Config.MINE_COUNT_INTERNAL_NAME).updateData(playerName, ++playerScore);
-        
-        // 同步到游戏内计分板
+        int playerScore = mobKillsScoreboard.getDataValue(playerName, 0);
+        mobKillsScoreboard.updateData(playerName, ++playerScore);
+
         syncToScoreboard(playerName, playerScore);
-        
+
         logger.debug(Global.config.toString());
     }
-    
-    /**
-     * 同步玩家挖掘数据到游戏内计分板
-     */
+
     private static void syncToScoreboard(String playerName, int playerScore) {
         try {
-            // 获取计分板对象
             ScoreboardObjective objective = Global.scoreboard.getNullableObjective(internalName);
             if (objective != null) {
-                // 更新游戏内计分板
                 ScoreHolder scoreHolder = ScoreHolder.fromName(playerName);
                 ScoreAccess scoreAccess = Global.scoreboard.getOrCreateScore(scoreHolder, objective);
                 scoreAccess.setScore(playerScore);

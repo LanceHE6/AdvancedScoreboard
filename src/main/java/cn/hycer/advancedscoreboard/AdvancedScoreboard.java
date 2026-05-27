@@ -1,14 +1,21 @@
 package cn.hycer.advancedscoreboard;
 
+import cn.hycer.advancedscoreboard.Command.ASBCommand;
 import cn.hycer.advancedscoreboard.Config.Config;
 import cn.hycer.advancedscoreboard.Event.PlayerBreakBlockEvent;
+import cn.hycer.advancedscoreboard.Event.PlayerKillMobEvent;
+import cn.hycer.advancedscoreboard.Event.PlayerPlaceBlockEvent;
 import cn.hycer.advancedscoreboard.Event.ServerStartedEvent;
 import cn.hycer.advancedscoreboard.Global.Global;
 import static cn.hycer.advancedscoreboard.Global.Global.logger;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.entity.event.v1.ServerEntityCombatEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.item.BlockItem;
+import net.minecraft.util.ActionResult;
 import org.apache.logging.log4j.LogManager;
 
 public class AdvancedScoreboard implements ModInitializer {
@@ -25,6 +32,9 @@ public class AdvancedScoreboard implements ModInitializer {
             return;
         }
 
+        //注册指令
+        ASBCommand.register();
+
         //注册服务器启动完毕的事件
         ServerLifecycleEvents.SERVER_STARTED.register(ServerStartedEvent::onServerStarted);
 
@@ -32,6 +42,20 @@ public class AdvancedScoreboard implements ModInitializer {
         PlayerBlockBreakEvents.AFTER.register(((world, playerEntity, blockPos, blockState, blockEntity) ->
                 PlayerBreakBlockEvent.onBreak(playerEntity)));
 
-        logger.info("mod load success!");
+        //注册玩家放置方块的事件（仅手持方块物品时计数）
+        UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
+            if (player.getStackInHand(hand).getItem() instanceof BlockItem) {
+                PlayerPlaceBlockEvent.onPlace(player);
+            }
+            return ActionResult.PASS;
+        });
+
+        //注册玩家击杀生物的事件
+        ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.register(
+            (world, entity, killedEntity, damageSource) ->
+                PlayerKillMobEvent.onKill(world, entity, killedEntity)
+        );
+
+        logger.info("advancedScoreboard load success!");
     }
 }
