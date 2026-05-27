@@ -5,6 +5,7 @@ import cn.hycer.advancedscoreboard.Global.Global;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 
@@ -15,7 +16,7 @@ public class SetCommand {
 
     public static LiteralArgumentBuilder<ServerCommandSource> build() {
         return literal("set")
-            .requires(source -> source.hasPermissionLevel(2))
+            .requires(CommandManager.requirePermissionLevel(CommandManager.GAMEMASTERS_CHECK))
             .then(literal("switchInterval")
                 .then(argument("value", IntegerArgumentType.integer(1))
                     .executes(context -> {

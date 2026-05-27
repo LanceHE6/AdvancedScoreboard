@@ -4,6 +4,7 @@ import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 
@@ -14,7 +15,7 @@ public class NotDisplayCommand {
 
     public static LiteralArgumentBuilder<ServerCommandSource> build() {
         return literal("notDisplay")
-            .requires(source -> source.hasPermissionLevel(2))
+            .requires(CommandManager.requirePermissionLevel(CommandManager.GAMEMASTERS_CHECK))
             .then(argument("displayName", StringArgumentType.greedyString())
                 .suggests(ASBCommand.DISPLAY_NAME_SUGGESTIONS)
                 .executes(context -> {
