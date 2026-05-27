@@ -101,6 +101,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: 下载所有构建产物
         uses: actions/download-artifact@v4
@@ -116,6 +118,19 @@ jobs:
           echo "MOD_VERSION=$MOD_VER" >> $GITHUB_ENV
           echo "mod_version=$MOD_VER" >> $GITHUB_OUTPUT
 
+      - name: 安装 git-cliff
+        run: |
+          curl -sSfL https://github.com/orhun/git-cliff/releases/download/v2.7.0/git-cliff-2.7.0-x86_64-unknown-linux-gnu.tar.gz | tar xz
+          sudo mv git-cliff-*/git-cliff /usr/local/bin/
+
+      - name: 生成更新日志
+        id: changelog
+        run: |
+          git-cliff --tag V${{ env.MOD_VERSION }} -o CHANGELOG_BODY.md
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          cat CHANGELOG_BODY.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: 创建 GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -123,6 +138,7 @@ jobs:
           name: V${{ env.MOD_VERSION }}
           # tag 格式 V2.1.0
           tag_name: V${{ env.MOD_VERSION }}
+          body: ${{ steps.changelog.outputs.changelog }}
           files: ./outputs/*.jar
           draft: false
           prerelease: false
