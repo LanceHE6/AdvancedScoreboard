@@ -3,6 +3,7 @@ name: Build & Release (Multi-Branch)
 on:
   push:
     tags:
+      - 'V*'
       - 'v*'
   workflow_dispatch:
     inputs:
@@ -87,13 +88,13 @@ jobs:
         run: |
           cd build/libs
           rm -f *-sources.jar
-          mv *.jar AdvancedScoreboard-${{ steps.version.outputs.mod_version }}-${{ steps.version.outputs.mc_version }}.jar
+          mv *.jar advancedscoreboard-fabric-${{ steps.version.outputs.mod_version }}-mc${{ steps.version.outputs.mc_version }}.jar
 
       - name: 上传构建产物 (${{ matrix.branch }})
         uses: actions/upload-artifact@v4
         with:
           name: jars-${{ matrix.branch }}
-          path: build/libs/AdvancedScoreboard-${{ steps.version.outputs.mod_version }}-${{ steps.version.outputs.mc_version }}.jar
+          path: build/libs/advancedscoreboard-fabric-${{ steps.version.outputs.mod_version }}-mc${{ steps.version.outputs.mc_version }}.jar
 
   release:
     needs: build
@@ -118,10 +119,10 @@ jobs:
       - name: 创建 GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          # 标题 fabric-1.0
-          name: ${{ env.MOD_VERSION }}
-          # 自动生成 tag
-          tag_name: ${{ env.MOD_VERSION }}
+          # 标题 V2.1.0
+          name: V${{ env.MOD_VERSION }}
+          # tag 格式 V2.1.0
+          tag_name: V${{ env.MOD_VERSION }}
           files: ./outputs/*.jar
           draft: false
           prerelease: false
