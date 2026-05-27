@@ -122,6 +122,31 @@ public class Config {
     }
 
     /**
+     * 补全旧版配置中缺失的默认榜单（升级兼容）
+     */
+    private void addMissingDefaultScoreboards() {
+        List<String[]> defaults = List.of(
+            new String[]{MINE_COUNT_INTERNAL_NAME, "挖掘量"},
+            new String[]{PLACE_COUNT_INTERNAL_NAME, "放置量"},
+            new String[]{ONLINE_TIME_INTERNAL_NAME, "在线时长(h)"},
+            new String[]{ELYTRA_DISTANCE_INTERNAL_NAME, "飞行距离(km)"},
+            new String[]{DAMAGE_TAKEN_INTERNAL_NAME, "受到伤害"},
+            new String[]{DEATHS_INTERNAL_NAME, "死亡次数"},
+            new String[]{MOB_KILLS_INTERNAL_NAME, "击杀生物数"}
+        );
+
+        for (String[] def : defaults) {
+            if (getScoreboardByInternalName(def[0]) == null) {
+                ScoreboardItem item = new ScoreboardItem();
+                item.setInternalName(def[0]);
+                item.setDisplayName(def[1]);
+                this.scoreboards.add(item);
+                logger.info("added missing default scoreboard: {} ({})", def[1], def[0]);
+            }
+        }
+    }
+
+    /**
      * 从文件加载配置
      */
     public void loadConfig() {
@@ -142,7 +167,9 @@ public class Config {
             this.saveInterval = loadedConfig.getSaveInterval();
             this.maxDisplayNum = loadedConfig.getMaxDisplayNum() > 0 ? loadedConfig.getMaxDisplayNum() : 15;
             this.hiddenScoreboards = loadedConfig.getHiddenScoreboards() != null ? loadedConfig.getHiddenScoreboards() : new HashSet<>();
-            this.scoreboards = loadedConfig.getScoreboards();
+            this.scoreboards = loadedConfig.getScoreboards() != null ? loadedConfig.getScoreboards() : new ArrayList<>();
+            // 补全旧版配置中缺失的默认榜单
+            addMissingDefaultScoreboards();
             // 迁移旧版配置：elytron_distance → elytra_dist
             for (ScoreboardItem item : this.scoreboards) {
                 if ("elytron_distance".equals(item.getInternalName())) {
