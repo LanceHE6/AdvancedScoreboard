@@ -5,9 +5,6 @@ import cn.hycer.advancedscoreboard.Global.Global;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import net.minecraft.command.permission.LeveledPermissionPredicate;
-import net.minecraft.command.permission.PermissionLevel;
-import net.minecraft.command.permission.PermissionPredicate;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 
@@ -18,13 +15,7 @@ public class SetCommand {
 
     public static LiteralArgumentBuilder<ServerCommandSource> build() {
         return literal("set")
-            .requires(source -> {
-                PermissionPredicate perms = source.getPermissions();
-                if (perms instanceof LeveledPermissionPredicate leveled) {
-                    return leveled.getLevel().isAtLeast(PermissionLevel.GAMEMASTERS);
-                }
-                return true;
-            })
+            .requires(source -> source.hasPermissionLevel(2))
             .then(literal("switchInterval")
                 .then(argument("value", IntegerArgumentType.integer(1))
                     .executes(context -> {
