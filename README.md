@@ -2,17 +2,18 @@
 
 
 
-AdvancedScoreboard 是一个基于 Fabric 开发的 Minecraft 模组，旨在为服务器提供可配置、自动化的计分板管理能力，支持多计分板轮播展示、玩家数据自动同步、配置热更新等特性，开箱即用地提供挖掘量、在线时长、鞘翅飞行距离、受到伤害等维度的计分板统计。
+AdvancedScoreboard 是一个基于 Fabric 开发的 Minecraft 模组，旨在为服务器提供可配置、自动化的计分板管理能力，支持多计分板轮播展示、玩家数据自动同步、配置热更新等特性，开箱即用地提供挖掘量、放置量、在线时长、鞘翅飞行距离、受到伤害、死亡次数等维度的计分板统计。
 
 ## 功能特性
 
 ### 核心功能
 1. **多维度计分板统计**
     - [x] 挖掘量：统计玩家破坏方块的数量
+    - [x] 放置数量：统计玩家放置方块的数量
     - [x] 在线时长：基于游戏内置统计，自动计算玩家在线小时数
     - [x] 鞘翅飞行距离：统计玩家使用鞘翅飞行的公里数
     - [x] 受到伤害：统计玩家受到的伤害值
-    - [x] 放置数量：统计玩家放置方块的数量
+    - [x] 死亡次数：统计玩家的死亡次数
     - [ ] 击杀生物数：统计玩家击杀所有的生物数量
     - [ ] ...
 2. **自动轮播切换**：配置化的计分板轮播
@@ -22,7 +23,7 @@ AdvancedScoreboard 是一个基于 Fabric 开发的 Minecraft 模组，旨在为
 6. **命令系统**
     - [x] 查询榜单：玩家可通过 `/asb scoreboard` 指令查询任意榜单的全部数据
     - [x] 配置项修改：OP 可通过 `/asb set` 指令动态修改轮播间隔、保存间隔、最大显示数量
-    - [ ] ~~个性化显示：玩家可通过 `/asb notDisplay` 隐藏不想看到的榜单，每个玩家独立控制~~ 暂无法实现，只能全局控制
+    - [x] 全局显示控制：OP 可通过 `/asb notDisplay` 指令全局隐藏/显示指定榜单
 
 ### 指令系统
 
@@ -43,7 +44,7 @@ AdvancedScoreboard 是一个基于 Fabric 开发的 Minecraft 模组，旨在为
 
 ### 扩展特性
 - 支持自定义计分板名称和显示名
-- 每玩家独立控制榜单显示，轮播时自动跳过已隐藏的榜单
+- OP 可全局控制榜单显示/隐藏，轮播时自动跳过已隐藏的榜单
 - 服务器启动时自动同步配置数据，保证数据一致性
 - 配置文件兼容旧版本，新增字段自动设置默认值
 
@@ -61,8 +62,8 @@ AdvancedScoreboard 是一个基于 Fabric 开发的 Minecraft 模组，旨在为
     - 注册配置中的计分板，同步已持久化的玩家数据
     - 启动轮播切换、数据同步定时任务
 3. **定时任务**（`Task.java`）
-    - 计分板轮播：每玩家独立轮播，根据 `playerPreferences` 过滤隐藏榜单，向各玩家单独发送 `ScoreboardDisplayS2CPacket`
-    - 数据同步：定时从 Minecraft Stats 读取在线时长/飞行距离/伤害数据，按 `maxDisplayNum` 截取前 N 名同步到游戏内计分板
+    - 计分板轮播：由 `ServerTick` 事件驱动，根据 `hiddenScoreboards` 过滤隐藏榜单，通过 `setObjectiveSlot(SIDEBAR)` 全局切换显示
+    - 数据同步：定时从 Minecraft Stats 读取在线时长/飞行距离/伤害/死亡数据，按 `maxDisplayNum` 截取前 N 名同步到游戏内计分板
 4. **配置管理**（`Config.java`/`ScoreboardItem.java`）
     - 基于 Jackson 实现 JSON 配置的加载/保存
     - 支持默认配置初始化、旧版配置兼容（新增字段自动填充默认值）
@@ -79,10 +80,7 @@ AdvancedScoreboard 是一个基于 Fabric 开发的 Minecraft 模组，旨在为
   "switchInterval": 5,          // 计分板轮播间隔（秒），最小1秒
   "saveInterval": 5,            // 数据保存间隔（秒），最小1秒
   "maxDisplayNum": 15,          // 榜单最大显示玩家数量，最小1
-  "playerPreferences": {        // 玩家榜单偏好（隐藏列表），key=玩家名
-    "PlayerA": ["elytron_distance"],
-    "PlayerB": ["mine_count", "damage_taken"]
-  },
+  "hiddenScoreboards": [],      // 全局隐藏的榜单 internalName 集合
   "scoreboards": [              // 计分板列表
     {
       "internalName": "mine_count",         // 内部标识（唯一）
@@ -100,13 +98,18 @@ AdvancedScoreboard 是一个基于 Fabric 开发的 Minecraft 模组，旨在为
       "data": {}
     },
     {
-      "internalName": "elytron_distance",
+      "internalName": "elytra_dist",
       "displayName": "飞行距离(km)",
       "data": {}
     },
     {
       "internalName": "damage_taken",
       "displayName": "受到伤害",
+      "data": {}
+    },
+    {
+      "internalName": "deaths",
+      "displayName": "死亡次数",
       "data": {}
     }
   ]
@@ -127,7 +130,10 @@ src/
 │   ├── java/cn/hycer/advancedscoreboard/
 │   │   ├── AdvancedScoreboard.java        // 模组主类
 │   │   ├── Command/                       // 指令系统
-│   │   │   └── ASBCommand.java            // /asb 指令注册
+│   │   │   ├── ASBCommand.java            // /asb 指令注册与共享 SuggestionProvider
+│   │   │   ├── SetCommand.java            // /asb set 子指令
+│   │   │   ├── ScoreboardCommand.java     // /asb scoreboard 子指令
+│   │   │   └── NotDisplayCommand.java     // /asb notDisplay 子指令
 │   │   ├── Config/                        // 配置相关
 │   │   │   ├── Config.java                // 根配置类
 │   │   │   └── ScoreboardItem.java        // 单个计分板配置

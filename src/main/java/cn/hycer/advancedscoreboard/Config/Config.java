@@ -24,6 +24,7 @@ public class Config {
     public static final String ONLINE_TIME_INTERNAL_NAME = "online_time"; // 在线时长
     public static final String ELYTRA_DISTANCE_INTERNAL_NAME = "elytra_dist"; // 鞘翅飞行距离
     public static final String DAMAGE_TAKEN_INTERNAL_NAME = "damage_taken"; // 受到的伤害
+    public static final String DEATHS_INTERNAL_NAME = "deaths"; // 死亡次数
     // JSON 解析器（格式化输出）
     @JsonIgnore
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
@@ -97,12 +98,18 @@ public class Config {
         damageTakenBoard.setInternalName(DAMAGE_TAKEN_INTERNAL_NAME);
         damageTakenBoard.setDisplayName("受到伤害");
 
+        // 初始化死亡榜
+        ScoreboardItem deathsBoard = new ScoreboardItem();
+        deathsBoard.setInternalName(DEATHS_INTERNAL_NAME);
+        deathsBoard.setDisplayName("死亡次数");
+
         // 添加到计分板列表
         this.scoreboards.add(mineCountBoard);
         this.scoreboards.add(placeCountBoard);
         this.scoreboards.add(onlineTimeBoard);
         this.scoreboards.add(elytronBoard);
         this.scoreboards.add(damageTakenBoard);
+        this.scoreboards.add(deathsBoard);
 
         logger.info("default config initialization completed");
     }

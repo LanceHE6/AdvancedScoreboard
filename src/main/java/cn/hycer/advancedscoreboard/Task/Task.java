@@ -109,6 +109,14 @@ public class Task {
                         item.updateData(playerName, damageTaken);
                     }
                 }
+                case Config.DEATHS_INTERNAL_NAME -> {
+                    for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+                        int deaths = player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.DEATHS));
+                        if (deaths == 0) continue;
+                        String playerName = player.getName().getString();
+                        item.updateData(playerName, deaths);
+                    }
+                }
             }
 
             syncTopNToScoreboard(objective, item.getData(), Global.config.getMaxDisplayNum());
