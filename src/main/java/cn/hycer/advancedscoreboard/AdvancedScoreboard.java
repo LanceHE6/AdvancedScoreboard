@@ -3,11 +3,13 @@ package cn.hycer.advancedscoreboard;
 import cn.hycer.advancedscoreboard.Command.ASBCommand;
 import cn.hycer.advancedscoreboard.Config.Config;
 import cn.hycer.advancedscoreboard.Event.PlayerBreakBlockEvent;
+import cn.hycer.advancedscoreboard.Event.PlayerKillMobEvent;
 import cn.hycer.advancedscoreboard.Event.PlayerPlaceBlockEvent;
 import cn.hycer.advancedscoreboard.Event.ServerStartedEvent;
 import cn.hycer.advancedscoreboard.Global.Global;
 import static cn.hycer.advancedscoreboard.Global.Global.logger;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.entity.event.v1.ServerEntityCombatEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
@@ -47,6 +49,12 @@ public class AdvancedScoreboard implements ModInitializer {
             }
             return ActionResult.PASS;
         });
+
+        //注册玩家击杀生物的事件
+        ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.register(
+            (world, entity, killedEntity, damageSource) ->
+                PlayerKillMobEvent.onKill(world, entity, killedEntity)
+        );
 
         logger.info("advancedScoreboard load success!");
     }

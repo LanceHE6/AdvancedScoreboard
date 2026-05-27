@@ -2,7 +2,7 @@
 
 
 
-AdvancedScoreboard 是一个基于 Fabric 开发的 Minecraft 模组，旨在为服务器提供可配置、自动化的计分板管理能力，支持多计分板轮播展示、玩家数据自动同步、配置热更新等特性，开箱即用地提供挖掘量、放置量、在线时长、鞘翅飞行距离、受到伤害、死亡次数等维度的计分板统计。
+AdvancedScoreboard 是一个基于 Fabric 开发的 Minecraft 模组，旨在为服务器提供可配置、自动化的计分板管理能力，支持多计分板轮播展示、玩家数据自动同步、配置热更新等特性，开箱即用地提供挖掘量、放置量、在线时长、鞘翅飞行距离、受到伤害、死亡次数、击杀生物数等维度的计分板统计。
 
 ## 功能特性
 
@@ -14,7 +14,7 @@ AdvancedScoreboard 是一个基于 Fabric 开发的 Minecraft 模组，旨在为
     - [x] 鞘翅飞行距离：统计玩家使用鞘翅飞行的公里数
     - [x] 受到伤害：统计玩家受到的伤害值
     - [x] 死亡次数：统计玩家的死亡次数
-    - [ ] 击杀生物数：统计玩家击杀所有的生物数量
+    - [x] 击杀生物数：统计玩家击杀生物的数量（不包含击杀玩家）
     - [ ] ...
 2. **自动轮播切换**：配置化的计分板轮播
 3. **数据自动同步**：定时将配置数据同步到游戏内计分板，并自动保存到本地配置文件
@@ -111,6 +111,11 @@ AdvancedScoreboard 是一个基于 Fabric 开发的 Minecraft 模组，旨在为
       "internalName": "deaths",
       "displayName": "死亡次数",
       "data": {}
+    },
+    {
+      "internalName": "mob_kills",
+      "displayName": "击杀生物数",
+      "data": {}
     }
   ]
 }
@@ -139,6 +144,7 @@ src/
 │   │   │   └── ScoreboardItem.java        // 单个计分板配置
 │   │   ├── Event/                         // 事件监听
 │   │   │   ├── PlayerBreakBlockEvent.java  // 玩家破坏方块事件
+│   │   │   ├── PlayerKillMobEvent.java     // 玩家击杀生物事件
 │   │   │   ├── PlayerPlaceBlockEvent.java  // 玩家放置方块事件
 │   │   │   └── ServerStartedEvent.java    // 服务器启动事件
 │   │   ├── Global/                        // 全局变量

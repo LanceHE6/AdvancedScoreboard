@@ -25,6 +25,7 @@ public class Config {
     public static final String ELYTRA_DISTANCE_INTERNAL_NAME = "elytra_dist"; // 鞘翅飞行距离
     public static final String DAMAGE_TAKEN_INTERNAL_NAME = "damage_taken"; // 受到的伤害
     public static final String DEATHS_INTERNAL_NAME = "deaths"; // 死亡次数
+    public static final String MOB_KILLS_INTERNAL_NAME = "mob_kills"; // 击杀生物数
     // JSON 解析器（格式化输出）
     @JsonIgnore
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
@@ -103,6 +104,11 @@ public class Config {
         deathsBoard.setInternalName(DEATHS_INTERNAL_NAME);
         deathsBoard.setDisplayName("死亡次数");
 
+        // 初始化击杀生物榜
+        ScoreboardItem mobKillsBoard = new ScoreboardItem();
+        mobKillsBoard.setInternalName(MOB_KILLS_INTERNAL_NAME);
+        mobKillsBoard.setDisplayName("击杀生物数");
+
         // 添加到计分板列表
         this.scoreboards.add(mineCountBoard);
         this.scoreboards.add(placeCountBoard);
@@ -110,6 +116,7 @@ public class Config {
         this.scoreboards.add(elytronBoard);
         this.scoreboards.add(damageTakenBoard);
         this.scoreboards.add(deathsBoard);
+        this.scoreboards.add(mobKillsBoard);
 
         logger.info("default config initialization completed");
     }
