@@ -3,17 +3,19 @@ package cn.hycer.advancedscoreboard.Task;
 import static cn.hycer.advancedscoreboard.Global.Global.logger;
 import static cn.hycer.advancedscoreboard.Global.Global.scoreboard;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import cn.hycer.advancedscoreboard.Config.Config;
 import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
+import cn.hycer.advancedscoreboard.render.CustomScoreboardRenderer;
 import net.minecraft.scoreboard.ScoreAccess;
 import net.minecraft.scoreboard.ScoreHolder;
-import net.minecraft.scoreboard.ScoreboardDisplaySlot;
 import net.minecraft.scoreboard.ScoreboardEntry;
 import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.server.MinecraftServer;
@@ -22,8 +24,11 @@ import net.minecraft.stat.Stats;
 
 public class Task {
 
-    // 全局轮播索引
-    private static int rotationIndex = 0;
+    // 每玩家的轮播索引
+    private static final Map<UUID, Integer> playerRotationIndex = new HashMap<>();
+
+    // 每个玩家当前正在显示的 ScoreboardItem
+    private static final Map<UUID, ScoreboardItem> playerCurrentItem = new HashMap<>();
 
     // Tick 计数器
     private static int tickCounter = 0;
@@ -62,15 +67,18 @@ public class Task {
                 return;
             }
 
-            rotationIndex = (rotationIndex + 1) % visibleScoreboards.size();
-            ScoreboardItem currentItem = visibleScoreboards.get(rotationIndex);
-            ScoreboardObjective objective = scoreboard.getNullableObjective(currentItem.getInternalName());
-            if (objective != null) {
-                logger.debug("rotating sidebar to '{}'", currentItem.getInternalName());
-                scoreboard.setObjectiveSlot(ScoreboardDisplaySlot.SIDEBAR, objective);
-            } else {
-                logger.warn("scoreboard objective is null for '{}', skipping display", currentItem.getInternalName());
+            for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+                UUID uuid = player.getUuid();
+                int index = playerRotationIndex.getOrDefault(uuid, -1);
+                index = (index + 1) % visibleScoreboards.size();
+                playerRotationIndex.put(uuid, index);
+
+                ScoreboardItem currentItem = visibleScoreboards.get(index);
+                playerCurrentItem.put(uuid, currentItem);
+                CustomScoreboardRenderer.sendDisplay(player, currentItem);
             }
+
+            logger.debug("rotated per-player sidebars, showing '{}'", visibleScoreboards.size());
         } catch (Exception e) {
             logger.error("scoreboard rotation error: {}", e.getMessage(), e);
         }
@@ -147,6 +155,23 @@ public class Task {
             ScoreHolder scoreHolder = ScoreHolder.fromName(entry.getKey());
             ScoreAccess scoreAccess = scoreboard.getOrCreateScore(scoreHolder, objective);
             scoreAccess.setScore(entry.getValue());
+        }
+    }
+
+    public static void removePlayer(UUID uuid) {
+        playerRotationIndex.remove(uuid);
+        playerCurrentItem.remove(uuid);
+    }
+
+    /**
+     * 刷新所有正在观看指定榜单的玩家的显示（实时事件更新后调用）
+     */
+    public static void refreshDisplayForItem(MinecraftServer server, ScoreboardItem item) {
+        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            ScoreboardItem current = playerCurrentItem.get(player.getUuid());
+            if (current != null && current.getInternalName().equals(item.getInternalName())) {
+                CustomScoreboardRenderer.sendDisplay(player, item);
+            }
         }
     }
 

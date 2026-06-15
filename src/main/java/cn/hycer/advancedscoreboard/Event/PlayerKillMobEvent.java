@@ -5,6 +5,7 @@ import static cn.hycer.advancedscoreboard.Global.Global.logger;
 import cn.hycer.advancedscoreboard.Config.Config;
 import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
+import cn.hycer.advancedscoreboard.Task.Task;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -26,12 +27,14 @@ public class PlayerKillMobEvent {
             return;
         }
 
-        ScoreboardItem mobKillsScoreboard = Global.config.getScoreboardByInternalName(internalName);
+        ScoreboardItem item = Global.config.getScoreboardByInternalName(internalName);
         String playerName = player.getName().getString();
-        int playerScore = mobKillsScoreboard.getDataValue(playerName, 0);
-        mobKillsScoreboard.updateData(playerName, ++playerScore);
+        int playerScore = item.getDataValue(playerName, 0);
+        item.updateData(playerName, ++playerScore);
 
         syncToScoreboard(playerName, playerScore);
+
+        Task.refreshDisplayForItem(world.getServer(), item);
 
         logger.debug(Global.config.toString());
     }

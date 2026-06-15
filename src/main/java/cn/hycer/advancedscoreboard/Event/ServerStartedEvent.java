@@ -4,8 +4,10 @@ import cn.hycer.advancedscoreboard.Config.Config;
 import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
 import cn.hycer.advancedscoreboard.Task.Task;
+import cn.hycer.advancedscoreboard.render.CustomScoreboardRenderer;
 import net.minecraft.scoreboard.*;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.world.World;
 
@@ -31,6 +33,11 @@ public class ServerStartedEvent {
         syncDataFromConfig();
         // 注册 ServerTick 事件驱动轮播和数据同步
         net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(Task::onServerTick);
+
+        // 注册玩家断开连接事件，清理虚拟 objective
+        net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register(
+            (handler, server2) -> CustomScoreboardRenderer.onPlayerDisconnect(handler.getPlayer())
+        );
     }
 
     public static void registerScoreboard(MinecraftServer server) {
