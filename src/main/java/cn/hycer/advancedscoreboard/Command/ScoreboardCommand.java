@@ -4,17 +4,17 @@ import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.Text;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
 
 import java.util.Map;
 
-import static net.minecraft.server.command.CommandManager.argument;
-import static net.minecraft.server.command.CommandManager.literal;
+import static net.minecraft.commands.Commands.argument;
+import static net.minecraft.commands.Commands.literal;
 
 public class ScoreboardCommand {
 
-    public static LiteralArgumentBuilder<ServerCommandSource> build() {
+    public static LiteralArgumentBuilder<CommandSourceStack> build() {
         return literal("scoreboard")
             .then(argument("displayName", StringArgumentType.greedyString())
                 .suggests(ASBCommand.DISPLAY_NAME_SUGGESTIONS)
@@ -26,29 +26,28 @@ public class ScoreboardCommand {
                         .orElse(null);
 
                     if (item == null) {
-                        context.getSource().sendFeedback(
-                            () -> Text.literal("未找到榜单: " + displayName),
-                            false
+                        context.getSource().sendFailure(
+                            Component.literal("未找到榜单: " + displayName)
                         );
                         return 0;
                     }
 
-                    context.getSource().sendFeedback(
-                        () -> Text.literal(Global.config.getFormattedDisplayName(item)),
+                    context.getSource().sendSuccess(
+                        () -> Component.literal(Global.config.getFormattedDisplayName(item)),
                         false
                     );
 
                     if (item.getData().isEmpty()) {
-                        context.getSource().sendFeedback(
-                            () -> Text.literal("暂无数据"),
+                        context.getSource().sendSuccess(
+                            () -> Component.literal("暂无数据"),
                             false
                         );
                     } else {
                         item.getData().entrySet().stream()
                             .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                             .forEach(entry ->
-                                context.getSource().sendFeedback(
-                                    () -> Text.literal(entry.getKey() + " - " + entry.getValue()),
+                                context.getSource().sendSuccess(
+                                    () -> Component.literal(entry.getKey() + " - " + entry.getValue()),
                                     false
                                 )
                             );

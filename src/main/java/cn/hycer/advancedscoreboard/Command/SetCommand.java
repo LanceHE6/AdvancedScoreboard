@@ -5,26 +5,26 @@ import cn.hycer.advancedscoreboard.Global.Global;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.Text;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
 
-import static net.minecraft.server.command.CommandManager.argument;
-import static net.minecraft.server.command.CommandManager.literal;
+import static net.minecraft.commands.Commands.argument;
+import static net.minecraft.commands.Commands.literal;
 
 public class SetCommand {
 
-    public static LiteralArgumentBuilder<ServerCommandSource> build() {
+    public static LiteralArgumentBuilder<CommandSourceStack> build() {
         return literal("set")
-            .requires(CommandManager.requirePermissionLevel(CommandManager.GAMEMASTERS_CHECK))
+            .requires(source -> Commands.LEVEL_GAMEMASTERS.check(source.permissions()))
             .then(literal("switchInterval")
                 .then(argument("value", IntegerArgumentType.integer(1))
                     .executes(context -> {
                         int value = IntegerArgumentType.getInteger(context, "value");
                         Global.config.setSwitchInterval(value);
                         Global.config.saveConfig();
-                        context.getSource().sendFeedback(
-                            () -> Text.literal("轮播间隔已设置为 " + value + " 秒"),
+                        context.getSource().sendSuccess(
+                            () -> Component.literal("轮播间隔已设置为 " + value + " 秒"),
                             false
                         );
                         return 1;
@@ -37,8 +37,8 @@ public class SetCommand {
                         int value = IntegerArgumentType.getInteger(context, "value");
                         Global.config.setSaveInterval(value);
                         Global.config.saveConfig();
-                        context.getSource().sendFeedback(
-                            () -> Text.literal("保存间隔已设置为 " + value + " 秒"),
+                        context.getSource().sendSuccess(
+                            () -> Component.literal("保存间隔已设置为 " + value + " 秒"),
                             false
                         );
                         return 1;
@@ -51,8 +51,8 @@ public class SetCommand {
                         int value = IntegerArgumentType.getInteger(context, "value");
                         Global.config.setMaxDisplayNum(value);
                         Global.config.saveConfig();
-                        context.getSource().sendFeedback(
-                            () -> Text.literal("最大显示数量已设置为 " + value),
+                        context.getSource().sendSuccess(
+                            () -> Component.literal("最大显示数量已设置为 " + value),
                             false
                         );
                         return 1;
@@ -66,8 +66,8 @@ public class SetCommand {
                         Global.config.setBorder(value);
                         Global.config.saveConfig();
                         ServerStartedEvent.refreshAllDisplayNames();
-                        context.getSource().sendFeedback(
-                            () -> Text.literal("边框已设置为 " + value),
+                        context.getSource().sendSuccess(
+                            () -> Component.literal("边框已设置为 " + value),
                             false
                         );
                         return 1;

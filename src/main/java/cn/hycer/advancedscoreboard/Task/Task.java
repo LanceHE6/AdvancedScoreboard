@@ -11,14 +11,14 @@ import java.util.stream.Collectors;
 import cn.hycer.advancedscoreboard.Config.Config;
 import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
-import net.minecraft.scoreboard.ScoreAccess;
-import net.minecraft.scoreboard.ScoreHolder;
-import net.minecraft.scoreboard.ScoreboardDisplaySlot;
-import net.minecraft.scoreboard.ScoreboardEntry;
-import net.minecraft.scoreboard.ScoreboardObjective;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.stat.Stats;
+import net.minecraft.stats.Stats;
+import net.minecraft.world.scores.DisplaySlot;
+import net.minecraft.world.scores.Objective;
+import net.minecraft.world.scores.PlayerScoreEntry;
+import net.minecraft.world.scores.ScoreAccess;
+import net.minecraft.world.scores.ScoreHolder;
 
 public class Task {
 
@@ -64,10 +64,10 @@ public class Task {
 
             rotationIndex = (rotationIndex + 1) % visibleScoreboards.size();
             ScoreboardItem currentItem = visibleScoreboards.get(rotationIndex);
-            ScoreboardObjective objective = scoreboard.getNullableObjective(currentItem.getInternalName());
+            Objective objective = scoreboard.getObjective(currentItem.getInternalName());
             if (objective != null) {
                 logger.debug("rotating sidebar to '{}'", currentItem.getInternalName());
-                scoreboard.setObjectiveSlot(ScoreboardDisplaySlot.SIDEBAR, objective);
+                scoreboard.setDisplayObjective(DisplaySlot.SIDEBAR, objective);
             } else {
                 logger.warn("scoreboard objective is null for '{}', skipping display", currentItem.getInternalName());
             }
@@ -80,40 +80,40 @@ public class Task {
     private static void syncDataToScoreboard(MinecraftServer server) {
         for (ScoreboardItem item : Global.config.getScoreboards()) {
             String internalName = item.getInternalName();
-            ScoreboardObjective objective = scoreboard.getNullableObjective(internalName);
+            Objective objective = scoreboard.getObjective(internalName);
             if (objective == null) continue;
             switch (internalName) {
                 case Config.ONLINE_TIME_INTERNAL_NAME -> {
-                    for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-                        int totalPlayTicks = player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.PLAY_TIME));
+                    for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                        int totalPlayTicks = player.getStats().getValue(Stats.CUSTOM, Stats.PLAY_TIME);
                         if (totalPlayTicks == 0) continue;
                         int totalHours = totalPlayTicks / 20 / 3600;
-                        String playerName = player.getName().getString();
+                        String playerName = player.getScoreboardName();
                         item.updateData(playerName, totalHours);
                     }
                 }
                 case Config.ELYTRA_DISTANCE_INTERNAL_NAME -> {
-                    for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-                        int aviateOneCM = player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.AVIATE_ONE_CM));
+                    for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                        int aviateOneCM = player.getStats().getValue(Stats.CUSTOM, Stats.AVIATE_ONE_CM);
                         if (aviateOneCM == 0) continue;
                         int aviateOneKM = aviateOneCM / 100 / 1000;
-                        String playerName = player.getName().getString();
+                        String playerName = player.getScoreboardName();
                         item.updateData(playerName, aviateOneKM);
                     }
                 }
                 case Config.DAMAGE_TAKEN_INTERNAL_NAME -> {
-                    for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-                        int damageTaken = player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.DAMAGE_TAKEN)) / 10;
+                    for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                        int damageTaken = player.getStats().getValue(Stats.CUSTOM, Stats.DAMAGE_TAKEN) / 10;
                         if (damageTaken == 0) continue;
-                        String playerName = player.getName().getString();
+                        String playerName = player.getScoreboardName();
                         item.updateData(playerName, damageTaken);
                     }
                 }
                 case Config.DEATHS_INTERNAL_NAME -> {
-                    for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-                        int deaths = player.getStatHandler().getStat(Stats.CUSTOM.getOrCreateStat(Stats.DEATHS));
+                    for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                        int deaths = player.getStats().getValue(Stats.CUSTOM, Stats.DEATHS);
                         if (deaths == 0) continue;
-                        String playerName = player.getName().getString();
+                        String playerName = player.getScoreboardName();
                         item.updateData(playerName, deaths);
                     }
                 }
@@ -127,7 +127,7 @@ public class Task {
      * 将数据按分数降序排列后，仅同步前 maxDisplay 名玩家到游戏内计分板
      * 同时移除不在前 N 名的玩家条目
      */
-    public static void syncTopNToScoreboard(ScoreboardObjective objective, Map<String, Integer> data, int maxDisplay) {
+    public static void syncTopNToScoreboard(Objective objective, Map<String, Integer> data, int maxDisplay) {
         List<Map.Entry<String, Integer>> topEntries = data.entrySet().stream()
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                 .limit(maxDisplay)
@@ -137,16 +137,16 @@ public class Task {
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
 
-        for (ScoreboardEntry entry : scoreboard.getScoreboardEntries(objective)) {
+        for (PlayerScoreEntry entry : scoreboard.listPlayerScores(objective)) {
             if (!topPlayerNames.contains(entry.owner())) {
-                scoreboard.removeScore(ScoreHolder.fromName(entry.owner()), objective);
+                scoreboard.resetSinglePlayerScore(ScoreHolder.forNameOnly(entry.owner()), objective);
             }
         }
 
         for (Map.Entry<String, Integer> entry : topEntries) {
-            ScoreHolder scoreHolder = ScoreHolder.fromName(entry.getKey());
-            ScoreAccess scoreAccess = scoreboard.getOrCreateScore(scoreHolder, objective);
-            scoreAccess.setScore(entry.getValue());
+            ScoreHolder scoreHolder = ScoreHolder.forNameOnly(entry.getKey());
+            ScoreAccess scoreAccess = scoreboard.getOrCreatePlayerScore(scoreHolder, objective);
+            scoreAccess.set(entry.getValue());
         }
     }
 

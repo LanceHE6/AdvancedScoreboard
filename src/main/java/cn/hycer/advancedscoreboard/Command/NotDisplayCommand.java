@@ -4,18 +4,18 @@ import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.Text;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
 
-import static net.minecraft.server.command.CommandManager.argument;
-import static net.minecraft.server.command.CommandManager.literal;
+import static net.minecraft.commands.Commands.argument;
+import static net.minecraft.commands.Commands.literal;
 
 public class NotDisplayCommand {
 
-    public static LiteralArgumentBuilder<ServerCommandSource> build() {
+    public static LiteralArgumentBuilder<CommandSourceStack> build() {
         return literal("notDisplay")
-            .requires(CommandManager.requirePermissionLevel(CommandManager.GAMEMASTERS_CHECK))
+            .requires(source -> Commands.LEVEL_GAMEMASTERS.check(source.permissions()))
             .then(argument("displayName", StringArgumentType.greedyString())
                 .suggests(ASBCommand.DISPLAY_NAME_SUGGESTIONS)
                 .executes(context -> {
@@ -26,9 +26,8 @@ public class NotDisplayCommand {
                         .orElse(null);
 
                     if (item == null) {
-                        context.getSource().sendFeedback(
-                            () -> Text.literal("未找到榜单: " + displayName),
-                            false
+                        context.getSource().sendFailure(
+                            Component.literal("未找到榜单: " + displayName)
                         );
                         return 0;
                     }
@@ -39,8 +38,8 @@ public class NotDisplayCommand {
                     String message = hidden
                         ? "已全局隐藏榜单: " + item.getDisplayName()
                         : "已全局显示榜单: " + item.getDisplayName();
-                    context.getSource().sendFeedback(
-                        () -> Text.literal(message),
+                    context.getSource().sendSuccess(
+                        () -> Component.literal(message),
                         false
                     );
 

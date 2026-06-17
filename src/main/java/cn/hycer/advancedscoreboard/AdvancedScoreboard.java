@@ -14,8 +14,8 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.item.BlockItem;
-import net.minecraft.util.ActionResult;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.BlockItem;
 import org.apache.logging.log4j.LogManager;
 
 public class AdvancedScoreboard implements ModInitializer {
@@ -44,10 +44,10 @@ public class AdvancedScoreboard implements ModInitializer {
 
         //注册玩家放置方块的事件（仅手持方块物品时计数）
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
-            if (player.getStackInHand(hand).getItem() instanceof BlockItem) {
+            if (player.getItemInHand(hand).getItem() instanceof BlockItem) {
                 PlayerPlaceBlockEvent.onPlace(player);
             }
-            return ActionResult.PASS;
+            return InteractionResult.PASS;
         });
 
         //注册玩家击杀生物的事件

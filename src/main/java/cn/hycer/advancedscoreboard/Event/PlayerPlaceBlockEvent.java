@@ -5,45 +5,35 @@ import static cn.hycer.advancedscoreboard.Global.Global.logger;
 import cn.hycer.advancedscoreboard.Config.Config;
 import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.scoreboard.ScoreAccess;
-import net.minecraft.scoreboard.ScoreHolder;
-import net.minecraft.scoreboard.ScoreboardObjective;
-import net.minecraft.util.ActionResult;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.scores.Objective;
+import net.minecraft.world.scores.ScoreAccess;
+import net.minecraft.world.scores.ScoreHolder;
 
 public class PlayerPlaceBlockEvent {
 
-    // 从配置文件中获取计分板名称
     private static final String internalName = Config.PLACE_COUNT_INTERNAL_NAME;
 
-    public static ActionResult onPlace(PlayerEntity player) {
+    public static InteractionResult onPlace(Player player) {
+        ScoreboardItem item = Global.config.getScoreboardByInternalName(internalName);
+        String playerName = player.getScoreboardName();
+        int playerScore = item.getDataValue(playerName, 0);
+        item.updateData(playerName, ++playerScore);
 
-        ScoreboardItem placeCountScoreboard = Global.config.getScoreboardByInternalName(internalName);
-        //获取玩家的分数
-        String playerName = player.getName().getString();
-        int playerScore = placeCountScoreboard.getDataValue(playerName, 0);
-        //更新玩家的分数
-        Global.config.getScoreboardByInternalName(Config.PLACE_COUNT_INTERNAL_NAME).updateData(playerName, ++playerScore);
-
-        // 同步到游戏内计分板
         syncToScoreboard(playerName, playerScore);
 
         logger.debug(Global.config.toString());
-        return ActionResult.PASS;
+        return InteractionResult.PASS;
     }
 
-    /**
-     * 同步玩家放置数据到游戏内计分板
-     */
     private static void syncToScoreboard(String playerName, int playerScore) {
         try {
-            // 获取计分板对象
-            ScoreboardObjective objective = Global.scoreboard.getNullableObjective(internalName);
+            Objective objective = Global.scoreboard.getObjective(internalName);
             if (objective != null) {
-                // 更新游戏内计分板
-                ScoreHolder scoreHolder = ScoreHolder.fromName(playerName);
-                ScoreAccess scoreAccess = Global.scoreboard.getOrCreateScore(scoreHolder, objective);
-                scoreAccess.setScore(playerScore);
+                ScoreHolder scoreHolder = ScoreHolder.forNameOnly(playerName);
+                ScoreAccess scoreAccess = Global.scoreboard.getOrCreatePlayerScore(scoreHolder, objective);
+                scoreAccess.set(playerScore);
             }
         } catch (Exception e) {
             logger.error("Failed to sync player data to scoreboard: {}", e.getMessage());

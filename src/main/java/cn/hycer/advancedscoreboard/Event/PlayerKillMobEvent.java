@@ -5,31 +5,30 @@ import static cn.hycer.advancedscoreboard.Global.Global.logger;
 import cn.hycer.advancedscoreboard.Config.Config;
 import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.scoreboard.ScoreAccess;
-import net.minecraft.scoreboard.ScoreHolder;
-import net.minecraft.scoreboard.ScoreboardObjective;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.scores.Objective;
+import net.minecraft.world.scores.ScoreAccess;
+import net.minecraft.world.scores.ScoreHolder;
 
 public class PlayerKillMobEvent {
 
     private static final String internalName = Config.MOB_KILLS_INTERNAL_NAME;
 
-    public static void onKill(ServerWorld world, Entity entity, LivingEntity killedEntity) {
-        if (!(entity instanceof ServerPlayerEntity player)) {
+    public static void onKill(net.minecraft.server.level.ServerLevel world, Entity entity, LivingEntity killedEntity) {
+        if (!(entity instanceof ServerPlayer player)) {
             return;
         }
-        if (killedEntity instanceof PlayerEntity) {
+        if (killedEntity instanceof Player) {
             return;
         }
 
-        ScoreboardItem mobKillsScoreboard = Global.config.getScoreboardByInternalName(internalName);
-        String playerName = player.getName().getString();
-        int playerScore = mobKillsScoreboard.getDataValue(playerName, 0);
-        mobKillsScoreboard.updateData(playerName, ++playerScore);
+        ScoreboardItem item = Global.config.getScoreboardByInternalName(internalName);
+        String playerName = player.getScoreboardName();
+        int playerScore = item.getDataValue(playerName, 0);
+        item.updateData(playerName, ++playerScore);
 
         syncToScoreboard(playerName, playerScore);
 
@@ -38,11 +37,11 @@ public class PlayerKillMobEvent {
 
     private static void syncToScoreboard(String playerName, int playerScore) {
         try {
-            ScoreboardObjective objective = Global.scoreboard.getNullableObjective(internalName);
+            Objective objective = Global.scoreboard.getObjective(internalName);
             if (objective != null) {
-                ScoreHolder scoreHolder = ScoreHolder.fromName(playerName);
-                ScoreAccess scoreAccess = Global.scoreboard.getOrCreateScore(scoreHolder, objective);
-                scoreAccess.setScore(playerScore);
+                ScoreHolder scoreHolder = ScoreHolder.forNameOnly(playerName);
+                ScoreAccess scoreAccess = Global.scoreboard.getOrCreatePlayerScore(scoreHolder, objective);
+                scoreAccess.set(playerScore);
             }
         } catch (Exception e) {
             logger.error("Failed to sync player data to scoreboard: {}", e.getMessage());

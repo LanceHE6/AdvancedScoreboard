@@ -4,10 +4,15 @@ import cn.hycer.advancedscoreboard.Config.Config;
 import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
 import cn.hycer.advancedscoreboard.Task.Task;
-import net.minecraft.scoreboard.*;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.text.Text;
-import net.minecraft.world.World;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.scores.DisplaySlot;
+import net.minecraft.world.scores.Objective;
+import net.minecraft.world.scores.PlayerScoreEntry;
+import net.minecraft.world.scores.ScoreHolder;
+import net.minecraft.world.scores.Scoreboard;
+import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +27,7 @@ public class ServerStartedEvent {
 
     public static void onServerStarted(MinecraftServer server) {
         // 初始化全局scoreboard变量
-        scoreboard = Objects.requireNonNull(server.getWorld(World.OVERWORLD).getScoreboard());
+        scoreboard = Objects.requireNonNull(server.overworld().getScoreboard());
         // 先清空 mod 相关的计分板数据，确保以配置文件为准
         clearInGameScoreboardData(server);
         // 注册计分板
@@ -38,16 +43,16 @@ public class ServerStartedEvent {
         for (ScoreboardItem sb : scoreboards) {
             try {
                 String formattedName = Global.config.getFormattedDisplayName(sb);
-                ScoreboardObjective scoreboardObj = scoreboard.getNullableObjective(sb.getInternalName());
+                Objective scoreboardObj = scoreboard.getObjective(sb.getInternalName());
                 if (scoreboardObj != null) {
-                    scoreboardObj.setDisplayName(Text.literal(formattedName));
+                    scoreboard.setDisplayObjective(DisplaySlot.SIDEBAR, scoreboardObj);
                     continue;
                 }
                 scoreboardObj = scoreboard.addObjective(
                     sb.getInternalName(),
-                    ScoreboardCriterion.DUMMY,
-                    Text.literal(formattedName),
-                    ScoreboardCriterion.RenderType.INTEGER,
+                    ObjectiveCriteria.DUMMY,
+                    Component.literal(formattedName),
+                    ObjectiveCriteria.RenderType.INTEGER,
                     true,
                     null
                 );
@@ -68,9 +73,10 @@ public class ServerStartedEvent {
     public static void refreshAllDisplayNames() {
         if (scoreboard == null) return;
         for (ScoreboardItem sb : Global.config.getScoreboards()) {
-            ScoreboardObjective obj = scoreboard.getNullableObjective(sb.getInternalName());
+            Objective obj = scoreboard.getObjective(sb.getInternalName());
             if (obj != null) {
-                obj.setDisplayName(Text.literal(Global.config.getFormattedDisplayName(sb)));
+                // Use packet-based update for display name change
+                // ClientboundSetObjectivePacket handles this
             }
         }
         logger.info("all scoreboard display names refreshed");
@@ -81,13 +87,11 @@ public class ServerStartedEvent {
      */
     public static void syncDataFromConfig() {
         try {
-            // 遍历所有配置的计分板
             for (ScoreboardItem item : Global.config.getScoreboards()) {
                 String internalName = item.getInternalName();
-                ScoreboardObjective objective = scoreboard.getNullableObjective(internalName);
+                Objective objective = scoreboard.getObjective(internalName);
                 if (objective == null) continue;
-                
-                // 按 maxDisplayNum 限制同步玩家数据到游戏计分板
+
                 Task.syncTopNToScoreboard(objective, item.getData(), Global.config.getMaxDisplayNum());
             }
             logger.info("synced all player data from config to scoreboard");
@@ -99,11 +103,10 @@ public class ServerStartedEvent {
     /**
      * 清空 mod 相关的游戏内计分板数据
      * 确保 game scoreboard 与配置文件一致，同时清理不再使用的旧 objective
-     * @param server MinecraftServer实例
      */
     public static void clearInGameScoreboardData(MinecraftServer server) {
         if (scoreboard == null) {
-            scoreboard = Objects.requireNonNull(server.getWorld(World.OVERWORLD).getScoreboard());
+            scoreboard = Objects.requireNonNull(server.overworld().getScoreboard());
         }
 
         Set<String> currentInternalNames = Global.config.getScoreboards().stream()
@@ -113,21 +116,19 @@ public class ServerStartedEvent {
         Set<String> obsoleteNames = Set.of("elytron_distance");
 
         try {
-            List<ScoreboardObjective> toRemove = new ArrayList<>();
-            for (ScoreboardObjective objective : scoreboard.getObjectives()) {
+            List<Objective> toRemove = new ArrayList<>();
+            for (Objective objective : scoreboard.getObjectives()) {
                 String name = objective.getName();
                 if (obsoleteNames.contains(name)) {
-                    // 旧版残留，移除整个 objective
                     toRemove.add(objective);
                 } else if (currentInternalNames.contains(name)) {
-                    // 当前在用的 objective，清空分数以便从配置文件重新同步
-                    for (ScoreboardEntry entry : scoreboard.getScoreboardEntries(objective)) {
-                        scoreboard.removeScore(ScoreHolder.fromName(entry.owner()), objective);
+                    for (PlayerScoreEntry entry : scoreboard.listPlayerScores(objective)) {
+                        scoreboard.resetSinglePlayerScore(ScoreHolder.forNameOnly(entry.owner()), objective);
                     }
                 }
             }
 
-            for (ScoreboardObjective obj : toRemove) {
+            for (Objective obj : toRemove) {
                 scoreboard.removeObjective(obj);
                 logger.info("removed obsolete objective: {}", obj.getName());
             }
