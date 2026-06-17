@@ -24,17 +24,45 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      branches: ${{ steps.get_branches.outputs.branches }}
+      branches: ${{ steps.filter_branches.outputs.branches }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: 获取仓库所有分支
-        id: get_branches
+      - name: 获取并过滤分支列表
+        id: filter_branches
         run: |
-          BRANCHES=$(git branch -r | grep -v '\->' | sed 's/origin\///' | sort -u | jq -R . | jq -cs .)
-          echo "branches=$BRANCHES" >> $GITHUB_OUTPUT
+          # 获取所有远程分支
+          ALL_BRANCHES=$(git branch -r | grep -v '\->' | sed 's/origin\///' | sort -u)
+
+          BUILD_TYPE="${{ github.event.inputs.build_type }}"
+          SINGLE_BRANCH="${{ github.event.inputs.branch }}"
+          EVENT_NAME="${{ github.event_name }}"
+
+          # 处理构建类型过滤
+          if [ "$EVENT_NAME" == "push" ] || [ "$BUILD_TYPE" == "all" ]; then
+            # 推送事件或全量构建：构建所有分支
+            FILTERED_BRANCHES="$ALL_BRANCHES"
+          elif [ "$BUILD_TYPE" == "single" ]; then
+            # 单分支构建：验证分支存在后只构建该分支
+            if echo "$ALL_BRANCHES" | grep -qw "$SINGLE_BRANCH"; then
+              FILTERED_BRANCHES="$SINGLE_BRANCH"
+              echo "单分支构建模式：$SINGLE_BRANCH"
+            else
+              echo "错误：分支 '$SINGLE_BRANCH' 不存在"
+              echo "可用分支：$(echo $ALL_BRANCHES | tr '\n' ' ')"
+              exit 1
+            fi
+          else
+            echo "未知构建类型：$BUILD_TYPE"
+            exit 1
+          fi
+
+          # 转换为 JSON 数组
+          JSON=$(echo "$FILTERED_BRANCHES" | jq -R . | jq -cs .)
+          echo "branches=$JSON" >> $GITHUB_OUTPUT
+          echo "将要构建的分支：$FILTERED_BRANCHES"
 
   build:
     needs: prepare
@@ -43,35 +71,33 @@ jobs:
       matrix:
         branch: ${{ fromJson(needs.prepare.outputs.branches) }}
       fail-fast: false
-    continue-on-error: true
     steps:
-      - name: 过滤分支逻辑
-        if: |
-          (github.event.inputs.build_type == 'single' && github.event.inputs.branch == matrix.branch) ||
-          (github.event.inputs.build_type == 'all') ||
-          (github.event_name == 'push')
-        run: echo "开始构建分支 ${{ matrix.branch }}"
-
       - name: Checkout 分支 ${{ matrix.branch }}
-        if: success()
         uses: actions/checkout@v4
         with:
           ref: ${{ matrix.branch }}
           fetch-depth: 1
 
-      - name: Set up JDK 21
-        if: success()
+      - name: 读取项目 Java 版本
+        id: java_version
+        run: |
+          JAVA_VER=$(grep -oP 'sourceCompatibility\s*=\s*JavaVersion\.VERSION_\K\d+' build.gradle)
+          if [ -z "$JAVA_VER" ]; then
+            JAVA_VER=$(grep -oP 'it\.options\.release\s*=\s*\K\d+' build.gradle)
+          fi
+          echo "version=$JAVA_VER" >> $GITHUB_OUTPUT
+          echo "检测到项目需要 JDK $JAVA_VER"
+
+      - name: Set up JDK ${{ steps.java_version.outputs.version }}
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '${{ steps.java_version.outputs.version }}'
           distribution: 'temurin'
 
       - name: Setup Gradle
-        if: success()
         uses: gradle/actions/setup-gradle@v3
 
       - name: Build with Gradle
-        if: success()
         run: gradle build --no-daemon
 
       - name: 读取版本号
@@ -98,6 +124,7 @@ jobs:
 
   release:
     needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -134,9 +161,7 @@ jobs:
       - name: 创建 GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          # 标题 V2.1.0
           name: V${{ env.MOD_VERSION }}
-          # tag 格式 V2.1.0
           tag_name: V${{ env.MOD_VERSION }}
           body: ${{ steps.changelog.outputs.changelog }}
           files: ./outputs/*.jar
