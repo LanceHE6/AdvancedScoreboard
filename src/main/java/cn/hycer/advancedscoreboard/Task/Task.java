@@ -173,7 +173,7 @@ public class Task {
             ScoreHolder scoreHolder = ScoreHolder.fromName(playerName);
             ScoreAccess scoreAccess = scoreboard.getOrCreateScore(scoreHolder, objective);
             scoreAccess.setScore(pingMs);
-            scoreAccess.numberFormatOverride(new FixedNumberFormat(Text.literal(pingMs + " ms")));
+            scoreAccess.setNumberFormat(new FixedNumberFormat(Text.literal(pingMs + " ms")));
         }
     }
 
