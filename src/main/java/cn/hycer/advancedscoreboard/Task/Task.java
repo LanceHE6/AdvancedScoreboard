@@ -11,14 +11,17 @@ import java.util.stream.Collectors;
 import cn.hycer.advancedscoreboard.Config.Config;
 import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
+import cn.hycer.advancedscoreboard.mixin.ServerCommonPacketListenerImplAccessor;
 import net.minecraft.scoreboard.ScoreAccess;
 import net.minecraft.scoreboard.ScoreHolder;
 import net.minecraft.scoreboard.ScoreboardDisplaySlot;
 import net.minecraft.scoreboard.ScoreboardEntry;
 import net.minecraft.scoreboard.ScoreboardObjective;
+import net.minecraft.scoreboard.number.FixedNumberFormat;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.stat.Stats;
+import net.minecraft.text.Text;
 
 public class Task {
 
@@ -33,6 +36,11 @@ public class Task {
         tickCounter++;
         int switchIntervalTicks = Global.config.getSwitchInterval() * 20;
         int saveIntervalTicks = Global.config.getSaveInterval() * 20;
+
+        // 延迟刷新（固定 1 秒）
+        if (tickCounter % 20 == 0) {
+            syncLatency(server);
+        }
 
         // 轮播切换
         if (tickCounter % switchIntervalTicks == 0) {
@@ -56,6 +64,7 @@ public class Task {
             Set<String> hidden = Global.config.getHiddenScoreboards();
             List<ScoreboardItem> visibleScoreboards = allScoreboards.stream()
                 .filter(sb -> !hidden.contains(sb.getInternalName()))
+                .filter(sb -> !Config.LATENCY_INTERNAL_NAME.equals(sb.getInternalName()))
                 .toList();
 
             if (visibleScoreboards.isEmpty()) {
@@ -76,10 +85,27 @@ public class Task {
         }
     }
 
+    /**
+     * 延迟数据刷新（固定 1 秒周期，独立于其他数据同步）
+     */
+    private static void syncLatency(MinecraftServer server) {
+        ScoreboardItem item = Global.config.getScoreboardByInternalName(Config.LATENCY_INTERNAL_NAME);
+        if (item == null) return;
+        ScoreboardObjective objective = scoreboard.getNullableObjective(Config.LATENCY_INTERNAL_NAME);
+        if (objective == null) return;
+
+        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+            int pingMs = ((ServerCommonPacketListenerImplAccessor) player.networkHandler).getLatency();
+            item.updateData(player.getName().getString(), pingMs);
+        }
+        syncLatencyToList(objective, item.getData());
+    }
+
     // 数据同步逻辑
     private static void syncDataToScoreboard(MinecraftServer server) {
         for (ScoreboardItem item : Global.config.getScoreboards()) {
             String internalName = item.getInternalName();
+            if (Config.LATENCY_INTERNAL_NAME.equals(internalName)) continue;
             ScoreboardObjective objective = scoreboard.getNullableObjective(internalName);
             if (objective == null) continue;
             switch (internalName) {
@@ -120,6 +146,34 @@ public class Task {
             }
 
             syncTopNToScoreboard(objective, item.getData(), Global.config.getMaxDisplayNum());
+        }
+    }
+
+    /**
+     * 同步延迟数据到 LIST 显示（TAB 玩家列表），每个玩家显示带 " ms" 单位的延迟值。
+     * 同时移除已离线的玩家条目。
+     */
+    private static void syncLatencyToList(ScoreboardObjective objective, Map<String, Integer> data) {
+        // 确保 LIST 显示槽始终指向延迟 objective
+        if (scoreboard.getObjectiveForSlot(ScoreboardDisplaySlot.LIST) != objective) {
+            scoreboard.setObjectiveSlot(ScoreboardDisplaySlot.LIST, objective);
+        }
+
+        // 清除离线玩家（data 中只包含刚同步的在线玩家）
+        for (ScoreboardEntry entry : scoreboard.getScoreboardEntries(objective)) {
+            if (!data.containsKey(entry.owner())) {
+                scoreboard.removeScore(ScoreHolder.fromName(entry.owner()), objective);
+            }
+        }
+
+        // 同步在线玩家延迟（带单位）
+        for (Map.Entry<String, Integer> entry : data.entrySet()) {
+            String playerName = entry.getKey();
+            int pingMs = entry.getValue();
+            ScoreHolder scoreHolder = ScoreHolder.fromName(playerName);
+            ScoreAccess scoreAccess = scoreboard.getOrCreateScore(scoreHolder, objective);
+            scoreAccess.setScore(pingMs);
+            scoreAccess.numberFormatOverride(new FixedNumberFormat(Text.literal(pingMs + " ms")));
         }
     }
 

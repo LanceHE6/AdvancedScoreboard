@@ -26,6 +26,7 @@ public class Config {
     public static final String DAMAGE_TAKEN_INTERNAL_NAME = "damage_taken"; // 受到的伤害
     public static final String DEATHS_INTERNAL_NAME = "deaths"; // 死亡次数
     public static final String MOB_KILLS_INTERNAL_NAME = "mob_kills"; // 击杀生物数
+    public static final String LATENCY_INTERNAL_NAME = "latency"; // 延迟(ms)
     // JSON 解析器（格式化输出）
     @JsonIgnore
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
@@ -109,6 +110,11 @@ public class Config {
         mobKillsBoard.setInternalName(MOB_KILLS_INTERNAL_NAME);
         mobKillsBoard.setDisplayName("击杀生物数");
 
+        // 初始化延迟显示
+        ScoreboardItem latencyBoard = new ScoreboardItem();
+        latencyBoard.setInternalName(LATENCY_INTERNAL_NAME);
+        latencyBoard.setDisplayName("延迟(ms)");
+
         // 添加到计分板列表
         this.scoreboards.add(mineCountBoard);
         this.scoreboards.add(placeCountBoard);
@@ -117,6 +123,7 @@ public class Config {
         this.scoreboards.add(damageTakenBoard);
         this.scoreboards.add(deathsBoard);
         this.scoreboards.add(mobKillsBoard);
+        this.scoreboards.add(latencyBoard);
 
         logger.info("default config initialization completed");
     }
@@ -132,7 +139,8 @@ public class Config {
             new String[]{ELYTRA_DISTANCE_INTERNAL_NAME, "飞行距离(km)"},
             new String[]{DAMAGE_TAKEN_INTERNAL_NAME, "受到伤害"},
             new String[]{DEATHS_INTERNAL_NAME, "死亡次数"},
-            new String[]{MOB_KILLS_INTERNAL_NAME, "击杀生物数"}
+            new String[]{MOB_KILLS_INTERNAL_NAME, "击杀生物数"},
+            new String[]{LATENCY_INTERNAL_NAME, "延迟(ms)"}
         );
 
         for (String[] def : defaults) {
