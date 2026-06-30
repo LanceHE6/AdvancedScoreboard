@@ -1,10 +1,10 @@
 package cn.hycer.advancedscoreboard.mixin;
 
 import cn.hycer.advancedscoreboard.Event.PlayerPlaceBlockEvent;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.BlockItem;
+import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.util.ActionResult;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -16,10 +16,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(BlockItem.class)
 public class BlockItemMixin {
 
-    @Inject(method = "useOn", at = @At("RETURN"))
-    private void onBlockPlaced(UseOnContext context, CallbackInfoReturnable<InteractionResult> cir) {
-        if (cir.getReturnValue() == InteractionResult.SUCCESS) {
-            Player player = context.getPlayer();
+    @Inject(method = "useOnBlock", at = @At("RETURN"))
+    private void onBlockPlaced(ItemPlacementContext context, CallbackInfoReturnable<ActionResult> cir) {
+        if (cir.getReturnValue() == ActionResult.SUCCESS) {
+            PlayerEntity player = context.getPlayer();
             if (player != null) {
                 PlayerPlaceBlockEvent.onPlace(player);
             }
