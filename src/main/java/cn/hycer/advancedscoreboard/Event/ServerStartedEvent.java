@@ -32,6 +32,8 @@ public class ServerStartedEvent {
         clearInGameScoreboardData(server);
         // 注册计分板
         registerScoreboard(server);
+        // 将延迟 objective 固定在 LIST 显示槽（TAB 玩家列表）
+        setLatencyToListDisplay();
         // 同步配置文件中的所有数据到游戏内计分板
         syncDataFromConfig();
         // 注册 ServerTick 事件驱动轮播和数据同步
@@ -64,6 +66,18 @@ public class ServerStartedEvent {
             } catch (Exception e) {
                 logger.error("failed to register scoreboard: {}, reason: {}", sb.getInternalName(), e.getMessage());
             }
+        }
+    }
+
+    /**
+     * 将延迟 objective 固定显示在 LIST 槽位（TAB 玩家列表），独立于 SIDEBAR 轮播。
+     */
+    private static void setLatencyToListDisplay() {
+        if (scoreboard == null) return;
+        Objective latencyObj = scoreboard.getObjective(Config.LATENCY_INTERNAL_NAME);
+        if (latencyObj != null) {
+            scoreboard.setDisplayObjective(DisplaySlot.LIST, latencyObj);
+            logger.info("latency objective set to LIST display slot");
         }
     }
 

@@ -11,6 +11,9 @@ import java.util.stream.Collectors;
 import cn.hycer.advancedscoreboard.Config.Config;
 import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
+import cn.hycer.advancedscoreboard.mixin.ServerCommonPacketListenerImplAccessor;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.numbers.FixedFormat;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.stats.Stats;
@@ -34,6 +37,11 @@ public class Task {
         int switchIntervalTicks = Global.config.getSwitchInterval() * 20;
         int saveIntervalTicks = Global.config.getSaveInterval() * 20;
 
+        // 延迟刷新（固定 1 秒）
+        if (tickCounter % 20 == 0) {
+            syncLatency(server);
+        }
+
         // 轮播切换
         if (tickCounter % switchIntervalTicks == 0) {
             rotateDisplay(server);
@@ -56,6 +64,7 @@ public class Task {
             Set<String> hidden = Global.config.getHiddenScoreboards();
             List<ScoreboardItem> visibleScoreboards = allScoreboards.stream()
                 .filter(sb -> !hidden.contains(sb.getInternalName()))
+                .filter(sb -> !Config.LATENCY_INTERNAL_NAME.equals(sb.getInternalName()))
                 .toList();
 
             if (visibleScoreboards.isEmpty()) {
@@ -76,10 +85,27 @@ public class Task {
         }
     }
 
+    /**
+     * 延迟数据刷新（固定 1 秒周期，独立于其他数据同步）
+     */
+    private static void syncLatency(MinecraftServer server) {
+        ScoreboardItem item = Global.config.getScoreboardByInternalName(Config.LATENCY_INTERNAL_NAME);
+        if (item == null) return;
+        Objective objective = scoreboard.getObjective(Config.LATENCY_INTERNAL_NAME);
+        if (objective == null) return;
+
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            int pingMs = ((ServerCommonPacketListenerImplAccessor) player.connection).getLatency();
+            item.updateData(player.getScoreboardName(), pingMs);
+        }
+        syncLatencyToList(objective, item.getData());
+    }
+
     // 数据同步逻辑
     private static void syncDataToScoreboard(MinecraftServer server) {
         for (ScoreboardItem item : Global.config.getScoreboards()) {
             String internalName = item.getInternalName();
+            if (Config.LATENCY_INTERNAL_NAME.equals(internalName)) continue;
             Objective objective = scoreboard.getObjective(internalName);
             if (objective == null) continue;
             switch (internalName) {
@@ -120,6 +146,34 @@ public class Task {
             }
 
             syncTopNToScoreboard(objective, item.getData(), Global.config.getMaxDisplayNum());
+        }
+    }
+
+    /**
+     * 同步延迟数据到 LIST 显示（TAB 玩家列表），每个玩家显示带 " ms" 单位的延迟值。
+     * 同时移除已离线的玩家条目。
+     */
+    private static void syncLatencyToList(Objective objective, Map<String, Integer> data) {
+        // 确保 LIST 显示槽始终指向延迟 objective
+        if (scoreboard.getDisplayObjective(DisplaySlot.LIST) != objective) {
+            scoreboard.setDisplayObjective(DisplaySlot.LIST, objective);
+        }
+
+        // 清除离线玩家（data 中只包含刚同步的在线玩家）
+        for (PlayerScoreEntry entry : scoreboard.listPlayerScores(objective)) {
+            if (!data.containsKey(entry.owner())) {
+                scoreboard.resetSinglePlayerScore(ScoreHolder.forNameOnly(entry.owner()), objective);
+            }
+        }
+
+        // 同步在线玩家延迟（带单位）
+        for (Map.Entry<String, Integer> entry : data.entrySet()) {
+            String playerName = entry.getKey();
+            int pingMs = entry.getValue();
+            ScoreHolder scoreHolder = ScoreHolder.forNameOnly(playerName);
+            ScoreAccess scoreAccess = scoreboard.getOrCreatePlayerScore(scoreHolder, objective);
+            scoreAccess.set(pingMs);
+            scoreAccess.numberFormatOverride(new FixedFormat(Component.literal(pingMs + " ms")));
         }
     }
 
