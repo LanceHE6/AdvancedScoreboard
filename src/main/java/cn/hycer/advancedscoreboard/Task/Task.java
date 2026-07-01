@@ -174,7 +174,7 @@ public class Task {
             ScoreHolder scoreHolder = ScoreHolder.fromName(playerName);
             ScoreAccess scoreAccess = scoreboard.getOrCreateScore(scoreHolder, objective);
             scoreAccess.setScore(pingMs);
-            Text display = Text.literal(pingMs + " ms")
+            Text display = Text.literal(pingMs + "ms")
                     .setStyle(Style.EMPTY.withColor(latencyColor(pingMs)));
             scoreAccess.setNumberFormat(new FixedNumberFormat(display));
         }
