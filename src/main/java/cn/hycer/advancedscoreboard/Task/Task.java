@@ -174,7 +174,7 @@ public class Task {
             ScoreHolder scoreHolder = ScoreHolder.forNameOnly(playerName);
             ScoreAccess scoreAccess = scoreboard.getOrCreatePlayerScore(scoreHolder, objective);
             scoreAccess.set(pingMs);
-            Component display = Component.literal(pingMs + " ms")
+            Component display = Component.literal(pingMs + "ms")
                     .withStyle(Style.EMPTY.withColor(latencyColor(pingMs)));
             scoreAccess.numberFormatOverride(new FixedFormat(display));
         }
