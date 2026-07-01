@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "advancedscoreboard",
+  "version": "${version}",
+  "name": "AdvancedScoreboard",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/advancedscoreboard/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-datagen": [
+      "cn.hycer.advancedscoreboard.client.AdvancedscoreboardDataGenerator"
+    ],
+    "client": [
+      "cn.hycer.advancedscoreboard.client.AdvancedscoreboardClient"
+    ],
+    "main": [
+      "cn.hycer.advancedscoreboard.AdvancedScoreboard"
+    ]
+  },
+  "mixins": [
+    "advancedscoreboard.mixins.json",
+    {
+      "config": "advancedscoreboard.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "fabric-api": "*",
+    "minecraft": "26.1.2"
+  }
+}
