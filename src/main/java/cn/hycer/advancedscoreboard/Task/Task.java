@@ -13,6 +13,7 @@ import cn.hycer.advancedscoreboard.Config.ScoreboardItem;
 import cn.hycer.advancedscoreboard.Global.Global;
 import cn.hycer.advancedscoreboard.mixin.ServerCommonPacketListenerImplAccessor;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.numbers.FixedFormat;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.MinecraftServer;
@@ -166,15 +167,28 @@ public class Task {
             }
         }
 
-        // 同步在线玩家延迟（带单位）
+        // 同步在线玩家延迟（带颜色 + 单位）
         for (Map.Entry<String, Integer> entry : data.entrySet()) {
             String playerName = entry.getKey();
             int pingMs = entry.getValue();
             ScoreHolder scoreHolder = ScoreHolder.forNameOnly(playerName);
             ScoreAccess scoreAccess = scoreboard.getOrCreatePlayerScore(scoreHolder, objective);
             scoreAccess.set(pingMs);
-            scoreAccess.numberFormatOverride(new FixedFormat(Component.literal(pingMs + " ms")));
+            Component display = Component.literal(pingMs + " ms")
+                    .withStyle(Style.EMPTY.withColor(latencyColor(pingMs)));
+            scoreAccess.numberFormatOverride(new FixedFormat(display));
         }
+    }
+
+    /**
+     * 根据延迟值返回对应的显示颜色。
+     * < 50ms 绿色 | < 100ms 黄色 | < 200ms 金色 | >= 200ms 红色
+     */
+    private static int latencyColor(int pingMs) {
+        if (pingMs < 50)  return 0x55FF55; // 绿色
+        if (pingMs < 100) return 0xFFFF55; // 黄色
+        if (pingMs < 200) return 0xFFAA00; // 金色
+        return 0xFF5555;                   // 红色
     }
 
     /**
