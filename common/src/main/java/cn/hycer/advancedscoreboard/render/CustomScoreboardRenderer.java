@@ -54,7 +54,7 @@ public class CustomScoreboardRenderer {
 
             obj.setDisplayName(Component.literal(Global.config.getFormattedDisplayName(item)));
             player.connection.send(
-                new ClientboundSetObjectivePacket(obj, 2)
+                new ClientboundSetObjectivePacket(obj, ClientboundSetObjectivePacket.METHOD_ADD)
             );
 
             List<String> oldHolders = playerScoreHolders.getOrDefault(uuid, List.of());
